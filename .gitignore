@@ -1,0 +1,19 @@
+# .NET
+bin/
+obj/
+*.user
+
+# EF Core / local database
+*.db
+*.db-shm
+*.db-wal
+bpradar.db
+
+# IDE
+.vs/
+.vscode/
+*.suo
+
+# OS
+Thumbs.db
+.DS_Store
