@@ -49,12 +49,14 @@ frameworks map onto that structure, and how a new framework is added later.
   - Cost Optimization
   - Operational Excellence
   - Performance Efficiency
-- **Control** = individual checklist/design-review items published per
-  pillar on learn.microsoft.com (e.g. "Define reliability targets", "Use
-  identity-based access control"), each with a code we assign (e.g.
-  `WAF-REL-01`), short title, description, and a guidance link back to the
-  official Microsoft Learn WAF page for that pillar.
+- **Control** = the 59 official checklist/design-review items published per
+  pillar on learn.microsoft.com, using Microsoft's own codes as-is (e.g.
+  `RE:01`, `SE:05`, `CO:02`), each with short title, paraphrased description,
+  and a guidance link back to the official Microsoft Learn page for that item.
 - Source reference: https://learn.microsoft.com/azure/well-architected/
+- **Full control catalog, seeding shape, and reference links: see
+  `08-waf.md`** — that file is the authoritative WAF seed-data spec; keep
+  this section as the short summary only.
 
 ## Adding a new framework later
 Because Framework/Domain/Control are plain data rows (not hard-coded types),

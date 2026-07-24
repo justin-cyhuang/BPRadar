@@ -29,7 +29,7 @@ match it (update this spec first if the model needs to change).
 |---|---|---|
 | Id | int (PK) | |
 | DomainId | int (FK → Domain) | |
-| Code | string | e.g. "A.5.1", "WAF-REL-01" |
+| Code | string | e.g. "A.5.1", "RE:01" (real WAF codes — see `08-waf.md`) |
 | Title | string | short title |
 | Description | string | 1–2 sentence paraphrased purpose |
 | GuidanceUrl | string? | optional reference link |
@@ -48,9 +48,80 @@ match it (update this spec first if the model needs to change).
 | Id | int (PK) | |
 | OrganizationId | int (FK → Organization) | |
 | FrameworkId | int (FK → Framework) | one assessment targets one framework |
+| BaselineProfileId | int? (FK → BaselineProfile) | optional target profile used for this assessment/report view |
 | Label | string | e.g. "2026 Q1 Security Review" |
+| SnapshotDate | DateTime | business-effective date for the assessment/import snapshot |
 | CreatedAt | DateTime | |
 | UpdatedAt | DateTime | |
+
+### BaselineProfile
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| OrganizationId | int (FK → Organization) | profile is scoped to an organization |
+| Name | string | e.g. "2026 Internal Target" |
+| Description | string? | |
+| IsDefault | bool | optional default profile for organization |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+
+### BaselineTarget
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| BaselineProfileId | int (FK → BaselineProfile) | |
+| FrameworkId | int (FK → Framework) | |
+| DomainId | int? (FK → Domain) | null = framework-level target, set = domain-level target |
+| TargetCompliancePercent | decimal? | target compliance %, e.g. 90.00 |
+| TargetScore | decimal? | optional target score on the normalized chart scale |
+| Notes | string? | |
+
+### SurveyTemplate
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| Name | string | e.g. "Enterprise Transformation Pulse" |
+| FrameworkId | int? (FK → Framework) | null = cross-framework template |
+| Description | string? | |
+| Cadence | enum `SurveyCadence` | Monthly / Quarterly / SemiAnnual / Annual |
+| IsActive | bool | |
+| CreatedAt | DateTime | |
+| UpdatedAt | DateTime | |
+
+### SurveyQuestion
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| SurveyTemplateId | int (FK → SurveyTemplate) | |
+| Code | string | e.g. `SVY-SEC-01` |
+| Prompt | string | survey question text |
+| FrameworkId | int? (FK → Framework) | optional explicit mapping |
+| DomainId | int? (FK → Domain) | optional mapping for domain rollup |
+| ControlId | int? (FK → Control) | optional mapping for control traceability |
+| Weight | decimal | default 1.0; used in weighted score |
+| SortOrder | int | |
+| IsRequired | bool | |
+
+### SurveySubmission
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| OrganizationId | int (FK → Organization) | |
+| SurveyTemplateId | int (FK → SurveyTemplate) | |
+| Label | string | e.g. "2026 Q3 Transformation Pulse" |
+| SnapshotDate | DateTime | business-effective snapshot date |
+| SubmittedAt | DateTime | when submission is finalized |
+| Notes | string? | optional summary notes |
+
+### SurveyResponse
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| SurveySubmissionId | int (FK → SurveySubmission) | |
+| SurveyQuestionId | int (FK → SurveyQuestion) | |
+| ResponseLevel | enum `SurveyResponseLevel` | VeryLow / Low / Medium / High / VeryHigh / NotApplicable |
+| Score | decimal? | optional numeric override on normalized scale |
+| Notes | string? | optional response note |
 
 ### AssessmentResult
 | Field | Type | Notes |
@@ -69,17 +140,33 @@ Uniqueness: one `AssessmentResult` per (`AssessmentId`, `ControlId`) pair —
 re-entering a result for the same control in the same assessment updates the
 existing row rather than duplicating it.
 
+Uniqueness: one `BaselineTarget` per (`BaselineProfileId`, `FrameworkId`,
+`DomainId`) tuple. (`DomainId = null` represents the framework-level target.)
+
+Uniqueness: one `SurveyResponse` per (`SurveySubmissionId`, `SurveyQuestionId`)
+pair.
+
 ## Enums
 
 ```
 enum ComplianceStatus { NotAssessed, Compliant, Partial, NonCompliant, NotApplicable }
 enum ResultSource { Manual, Import }
+enum SurveyCadence { Monthly, Quarterly, SemiAnnual, Annual }
+enum SurveyResponseLevel { VeryLow, Low, Medium, High, VeryHigh, NotApplicable }
 ```
 
 ## Relationships
 ```
 Framework 1---* Domain 1---* Control
+Framework 1---* SurveyTemplate (optional binding)
+SurveyTemplate 1---* SurveyQuestion
+Organization 1---* SurveySubmission *---1 SurveyTemplate
+SurveySubmission 1---* SurveyResponse *---1 SurveyQuestion
+Organization 1---* BaselineProfile 1---* BaselineTarget
+Framework 1---* BaselineTarget
+Domain 1---* BaselineTarget (optional link)
 Organization 1---* Assessment *---1 Framework
+Assessment *---0..1 BaselineProfile
 Assessment 1---* AssessmentResult *---1 Control
 ```
 
@@ -94,6 +181,16 @@ Assessment 1---* AssessmentResult *---1 Control
   numeric mapping of Status within that domain for the assessment:
   `Compliant=1.0, Partial=0.5, NonCompliant=0.0` (NotApplicable and
   NotAssessed excluded from the average).
+- **Framework target delta** = `Actual Compliance % - TargetCompliancePercent`
+  (when framework-level target exists in selected BaselineProfile).
+- **Domain target delta** = `Actual Domain score - TargetScore` (when
+  domain-level target exists in selected BaselineProfile).
+- **Survey profile score** per SurveySubmission = weighted average of mapped
+  question scores (`Weight` from `SurveyQuestion`), normalized to 0–100.
+- **Survey transformation delta** = current SurveySubmission profile score
+  minus the prior submission score for the same Organization+SurveyTemplate.
+- **Survey domain transformation delta** = per-domain score delta between the
+  latest and previous submission (for questions mapped to the domain).
 
 ## Notes
 - SQLite file path: configurable via `appsettings.json`
@@ -103,3 +200,7 @@ Assessment 1---* AssessmentResult *---1 Control
   via an EF Core seeding step / a dedicated seed script, kept separate from
   user-entered `Organization`/`Assessment`/`AssessmentResult` data so it can
   be re-run safely without touching assessment data.
+- Baseline profiles/targets are user-authored configuration and are not part
+  of immutable framework seed data.
+- Survey templates/questions can be seeded as defaults, but regular
+  SurveySubmission/SurveyResponse records are operational time-series data.

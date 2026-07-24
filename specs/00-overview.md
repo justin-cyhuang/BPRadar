@@ -42,6 +42,12 @@ out of scope for MVP; see Non-goals.)
   - gap list (non-compliant / partial controls) with drill-down
   - a radar chart comparing multiple frameworks (or multiple domains within
     a framework) for the same assessment/organization
+- Support **baseline/target profiles** so assessors can define target
+  compliance/score per framework and domain, then compare actual vs target.
+- Support a recurring **company profile survey** (key items mapped to
+  frameworks/domains/controls) so users can submit snapshots regularly and
+  track enterprise transformation over time.
+- Support **audit handoff reporting exports** in CSV and PDF formats.
 - Ship as a single ASP.NET Core (.NET Core 10) web application, using only
   Microsoft-published packages (see `06-tech-stack.md`).
 
@@ -51,8 +57,7 @@ out of scope for MVP; see Non-goals.)
 - **Live/automated data pulls** from Microsoft APIs (e.g. Microsoft Defender
   for Cloud Secure Score, Azure Policy compliance) — data entry is manual or
   file-import only in MVP; this is called out as a future enhancement.
-- **Trend-over-time / historical analytics** beyond storing an `Assessment`
-  per point in time — visual trend charts are a future enhancement.
+- **Advanced analytics** (forecasting/predictive scoring/ML) is out of scope.
 - **Reproducing full standard text.** ISO 27001 and ISO 20000 are paid
   standards; BPRadar stores only control codes, short titles, and brief
   paraphrased descriptions sufficient for mapping and assessment — not the
@@ -69,8 +74,13 @@ out of scope for MVP; see Non-goals.)
    - by importing a CSV/XLSX file of prior assessment results.
 3. Assessor repeats for other frameworks against the same Organization
    (e.g. also assess against Azure WAF).
-4. Assessor opens the **Dashboard** to see completion/gap summaries per
+4. Assessor fills the recurring **Company Profile Survey** (monthly/quarterly)
+   to capture a compact transformation snapshot aligned with key template
+   items.
+5. Assessor opens the **Dashboard** to see completion/gap summaries per
    framework and a radar chart comparing the frameworks/domains side by side.
+6. Assessor selects a **Baseline/Target Profile** to view target deltas, then
+   exports CSV/PDF report artifacts for audit handoff.
 
 ## Related specs
 - `01-frameworks.md` — framework/domain/control definitions in scope
@@ -79,3 +89,5 @@ out of scope for MVP; see Non-goals.)
 - `04-import.md` — bulk import UX and rules
 - `05-dashboard.md` — dashboard and radar chart detail
 - `06-tech-stack.md` — technical architecture and coding ground rules
+- `07-survey.md` — recurring company profile survey and transformation tracking
+- `08-waf.md` — Azure Well-Architected Framework detailed control catalog and seed reference

@@ -27,6 +27,12 @@
 - No third-party charting package. The radar/spider chart in
   `05-dashboard.md` is implemented as a custom Razor/SVG component.
 
+## Reporting exports
+- **CSV export** is generated server-side using built-in .NET I/O/encoding.
+- **PDF export** is delivered via a print-friendly report view (HTML/CSS)
+  designed for browser Save-as-PDF audit handoff, avoiding non-Microsoft
+  dependencies while still producing a consistent report layout.
+
 ## ★ Ground rule: Microsoft-published packages only
 Every package reference (NuGet, and any client-side script/library if ever
 needed) used in this project **must be published by Microsoft**. Examples of
@@ -43,6 +49,38 @@ in-house rather than pulling in a third-party dependency. Any exception to
 this rule requires explicit user approval before being added, and must be
 recorded here with justification.
 
+## Tracing and diagnostics (required)
+- Built-in tracing is mandatory for debuggability, using
+  `System.Diagnostics.TraceSource` (source name: `BPRadar`) as the project
+  trace backbone.
+- Trace level is environment-configurable (development/staging/production)
+  so the same code can run with different verbosity without recompilation.
+- Correlation is required on every request and long-running operation:
+  - Accept incoming `X-Correlation-ID` when present; otherwise generate one.
+  - Set `Trace.CorrelationManager.ActivityId` per request/operation.
+  - Include the correlation ID in all trace lines and error responses.
+- Minimum required trace points:
+  - Request start/end for write operations (create/update/import).
+  - Manual assessment upsert attempts and outcomes.
+  - Import preview and import commit summary (rows read/valid/invalid/upserted).
+  - Survey submission lifecycle (start/save/finalize) and trend computation.
+  - Dashboard metric computation start/end and elapsed time.
+  - Unhandled exception boundary with correlation ID and operation context.
+- Minimum required trace fields per event:
+  - UTC timestamp (ISO 8601), severity, component, operation name,
+    correlation ID, duration ms (when applicable),
+    and key business IDs when available (`OrganizationId`, `AssessmentId`,
+    `FrameworkId`, `ControlId`).
+- Sensitive-data rule for tracing:
+  - Do not log raw uploaded file contents, free-form Notes, or Evidence URLs.
+  - Log only metadata (file name, byte size, row count, hash) and validation
+    summaries needed for debugging.
+- Trace listeners:
+  - Development: `ConsoleTraceListener`.
+  - Local runtime: `TextWriterTraceListener` to `logs/` with daily file
+    naming; retention cleanup (e.g. keep last 14 days) handled by app startup
+    housekeeping code.
+
 ## Project layout (proposed, refined at bootstrap)
 ```
 BPRadar/
@@ -53,9 +91,12 @@ BPRadar/
       Features/
         Frameworks/          # framework/domain/control seed + read APIs
         Assessments/         # assessment CRUD
+        Baselines/           # baseline/target profile management
+        Surveys/             # recurring company profile survey and submissions
         ManualEntry/         # checklist UI (03-manual-entry.md)
         Import/              # CSV/XLSX import pipeline (04-import.md)
         Dashboard/           # dashboard + radar chart (05-dashboard.md)
+        Reporting/           # CSV/PDF audit handoff exports
       wwwroot/
   tests/
     BPRadar.Tests/           # unit tests (scoring logic, import validation, etc.)
@@ -72,4 +113,4 @@ BPRadar/
 
 ## Out of scope (recap from 00-overview.md)
 - Auth/roles, live Microsoft API integration (e.g. Defender for Cloud),
-  trend-over-time analytics, PDF export, multi-tenant hosting.
+  predictive analytics/forecasting, multi-tenant hosting.
