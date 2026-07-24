@@ -67,6 +67,22 @@ from a CSV or XLSX file, as an alternative/complement to manual entry.
 - Rows with unknown control references are rejected with explicit row-level
   errors in preview.
 
+## Example rows (Azure WAF)
+
+Real `ControlCode` values must come from the seeded control catalog for the
+target framework — for Azure WAF that is the 59 codes in `08-waf.md` §3
+(e.g. `RE:01`, `SE:05`, `CO:07`), never placeholders like `RE-01` or
+`WAF-REL-01`. A ready-to-use example file with a full row set (including
+`Yes`/`No`/`N/A` status aliases and both `0-100`/`0-5` score scales) is
+checked in at `seed-data/samples/waf-import-sample.csv`. Header + first two
+rows for reference:
+
+```csv
+OrganizationName,FrameworkCode,FrameworkVersion,AssessmentLabel,AssessmentSnapshotDate,BaselineProfileName,ControlCode,DomainCode,ControlTitle,Status,Score,ScoreScale,EvidenceUrl,Notes,ExternalRecordId
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,RE:01,RE,Simplicity & efficiency,Compliant,90,0-100,https://contoso.example/evidence/re01,Design reviewed and simplified last quarter,EXT-RE-001
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,RE:04,RE,Reliability targets,Yes,4,0-5,https://contoso.example/evidence/re04,SLO/RTO/RPO documented for tier-1 flows,EXT-RE-004
+```
+
 ## Import flow
 1. Assessor opens an existing Assessment and chooses "Import results".
 2. Uploads a CSV/XLSX file.

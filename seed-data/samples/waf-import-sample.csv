@@ -1,0 +1,11 @@
+OrganizationName,FrameworkCode,FrameworkVersion,AssessmentLabel,AssessmentSnapshotDate,BaselineProfileName,ControlCode,DomainCode,ControlTitle,Status,Score,ScoreScale,EvidenceUrl,Notes,ExternalRecordId
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,RE:01,RE,Simplicity & efficiency,Compliant,90,0-100,https://contoso.example/evidence/re01,Design reviewed and simplified last quarter,EXT-RE-001
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,RE:04,RE,Reliability targets,Yes,4,0-5,https://contoso.example/evidence/re04,SLO/RTO/RPO documented for tier-1 flows,EXT-RE-004
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,RE:09,RE,Disaster recovery plans,Partial,55,0-100,,DR plan exists but not tested in 12 months,EXT-RE-009
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,SE:05,SE,Identity & access management,Compliant,,,https://contoso.example/evidence/se05,Conditional Access + least-privilege RBAC enforced,EXT-SE-005
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,SE:09,SE,Secrets management,No,,,,Secrets stored in app config instead of Key Vault,EXT-SE-009
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,CO:03,CO,Cost data review,Partial,60,0-100,,Cost Management alerts configured but not reviewed weekly,EXT-CO-003
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,CO:07,CO,Component cost optimization,N/A,,,,Not applicable - single-tier workload with no unused components,EXT-CO-007
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,OE:05,OE,Infrastructure as code,Compliant,3,0-5,https://contoso.example/evidence/oe05,All infra provisioned via Bicep,EXT-OE-005
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,OE:11,OE,Safe deployment practices,Not Assessed,,,,Deployment ring strategy still being designed,EXT-OE-011
+Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,PE:06,PE,Performance testing,NonCompliant,20,0-100,,No load testing performed against prod-like environment yet,EXT-PE-006

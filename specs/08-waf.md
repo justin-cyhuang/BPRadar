@@ -203,6 +203,14 @@ Microsoft revises WAF checklist pages periodically (each page's front-matter
 - `02-data-model.md` — `Control.GuidanceUrl` field should be added if not
   already present, to store the per-control Microsoft Learn link from §3/§4.
 - `04-import.md` — `ControlCode` values for WAF rows must match §3 exactly
-  (e.g. `RE:01`, not `RE-01` or `WAF-REL-01`); update the import spec's
-  example rows to use real codes instead of placeholders.
+  (e.g. `RE:01`, not `RE-01` or `WAF-REL-01`); the import spec's "Example
+  rows (Azure WAF)" section now uses real codes instead of placeholders.
 - `06-tech-stack.md` — seeding routine location/approach.
+- `../seed-data/` (repo root, pre-bootstrap staging area) — ready-to-load
+  fixtures implementing this spec, prepared ahead of Phase 1 coding:
+  - `seed-data/frameworks/azure-waf.json` — Framework/Domain/Control seed
+    matching §4's shape, all 59 controls.
+  - `seed-data/survey/waf-survey-template.json` — draft `07-survey.md`
+    template with 20 questions mapped to real WAF `ControlCode`s.
+  - `seed-data/samples/waf-import-sample.csv` — filled-in `04-import.md`
+    example file.
