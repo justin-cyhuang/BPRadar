@@ -83,6 +83,26 @@ Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal 
 Contoso Ltd,AZURE_WAF,2026-07,2026 Q3 Azure WAF Review,2026-07-01,2026 Internal Target,RE:04,RE,Reliability targets,Yes,4,0-5,https://contoso.example/evidence/re04,SLO/RTO/RPO documented for tier-1 flows,EXT-RE-004
 ```
 
+## Example rows (ISO 27001 / ISO 20000-1)
+
+The same column layout applies to the two ISO frameworks; only
+`FrameworkCode`, `ControlCode`, and `DomainCode` change. Real codes come from
+`09-iso27001.md` §3 (93 Annex A controls, e.g. `A.5.1`, `A.8.24`) and
+`10-iso20000.md` §3 (32 curated items, e.g. `C4.3`, `OPS-07` — see that
+spec's confidence note on the `OPS-xx` numbering). Full example files are
+checked in at `seed-data/samples/iso27001-import-sample.csv` and
+`seed-data/samples/iso20000-import-sample.csv`. Header + first row each:
+
+```csv
+OrganizationName,FrameworkCode,FrameworkVersion,AssessmentLabel,AssessmentSnapshotDate,BaselineProfileName,ControlCode,DomainCode,ControlTitle,Status,Score,ScoreScale,EvidenceUrl,Notes,ExternalRecordId
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.5.1,A.5,Policies for information security,Compliant,95,0-100,https://contoso.example/evidence/a501,Policy approved by CISO and reviewed annually,EXT-A501
+```
+
+```csv
+OrganizationName,FrameworkCode,FrameworkVersion,AssessmentLabel,AssessmentSnapshotDate,BaselineProfileName,ControlCode,DomainCode,ControlTitle,Status,Score,ScoreScale,EvidenceUrl,Notes,ExternalRecordId
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C4.3,C4,SMS scope,Compliant,,,https://contoso.example/evidence/c43,SMS scope statement approved and published,EXT-C43
+```
+
 ## Import flow
 1. Assessor opens an existing Assessment and chooses "Import results".
 2. Uploads a CSV/XLSX file.

@@ -1,0 +1,36 @@
+{
+  "surveyTemplate": {
+    "name": "ISO 27001 ISMS Transformation Pulse",
+    "frameworkCode": "ISO27001_2022",
+    "description": "Lightweight recurring pulse covering all 4 ISO/IEC 27001:2022 Annex A themes. Complements full ISO 27001 Assessments (04-import.md/03-manual-entry.md) with a quick quarterly check-in for ISMS maturity tracking (07-survey.md).",
+    "cadence": "Quarterly",
+    "isActive": true
+  },
+  "questions": [
+    { "code": "SVY-ISO27-ORG-01", "prompt": "Is there an approved, communicated top-level information security policy?", "domainCode": "A.5", "controlCode": "A.5.1", "weight": 1.0, "sortOrder": 1, "isRequired": true },
+    { "code": "SVY-ISO27-ORG-02", "prompt": "Is there a current, owned inventory of information assets?", "domainCode": "A.5", "controlCode": "A.5.9", "weight": 1.0, "sortOrder": 2, "isRequired": true },
+    { "code": "SVY-ISO27-ORG-03", "prompt": "Are access rights provisioned, reviewed, and revoked in line with policy and role changes?", "domainCode": "A.5", "controlCode": "A.5.18", "weight": 1.0, "sortOrder": 3, "isRequired": true },
+    { "code": "SVY-ISO27-ORG-04", "prompt": "Are security requirements defined and embedded in supplier agreements?", "domainCode": "A.5", "controlCode": "A.5.20", "weight": 1.0, "sortOrder": 4, "isRequired": true },
+    { "code": "SVY-ISO27-ORG-05", "prompt": "Is there a documented, rehearsed incident response process from planning through post-incident learning?", "domainCode": "A.5", "controlCode": "A.5.26", "weight": 1.0, "sortOrder": 5, "isRequired": true },
+
+    { "code": "SVY-ISO27-PPL-01", "prompt": "Are candidates screened before employment, proportional to role risk?", "domainCode": "A.6", "controlCode": "A.6.1", "weight": 1.0, "sortOrder": 6, "isRequired": true },
+    { "code": "SVY-ISO27-PPL-02", "prompt": "Is ongoing security awareness/training provided appropriate to each role?", "domainCode": "A.6", "controlCode": "A.6.3", "weight": 1.0, "sortOrder": 7, "isRequired": true },
+    { "code": "SVY-ISO27-PPL-03", "prompt": "Do personnel have a clear mechanism to report suspected security events?", "domainCode": "A.6", "controlCode": "A.6.8", "weight": 1.0, "sortOrder": 8, "isRequired": false },
+
+    { "code": "SVY-ISO27-PHY-01", "prompt": "Is physical entry to secure areas controlled appropriate to sensitivity?", "domainCode": "A.7", "controlCode": "A.7.2", "weight": 1.0, "sortOrder": 9, "isRequired": true },
+    { "code": "SVY-ISO27-PHY-02", "prompt": "Is sensitive data/licensed software verified as removed before equipment disposal or reuse?", "domainCode": "A.7", "controlCode": "A.7.14", "weight": 1.0, "sortOrder": 10, "isRequired": false },
+
+    { "code": "SVY-ISO27-TEC-01", "prompt": "Are privileged access rights tightly restricted and managed?", "domainCode": "A.8", "controlCode": "A.8.2", "weight": 1.0, "sortOrder": 11, "isRequired": true },
+    { "code": "SVY-ISO27-TEC-02", "prompt": "Are technical vulnerabilities identified, evaluated, and remediated in a timely manner?", "domainCode": "A.8", "controlCode": "A.8.8", "weight": 1.0, "sortOrder": 12, "isRequired": true },
+    { "code": "SVY-ISO27-TEC-03", "prompt": "Are backups maintained and regularly tested per business/continuity requirements?", "domainCode": "A.8", "controlCode": "A.8.13", "weight": 1.0, "sortOrder": 13, "isRequired": true },
+    { "code": "SVY-ISO27-TEC-04", "prompt": "Is cryptography applied consistently per documented rules aligned to data classification?", "domainCode": "A.8", "controlCode": "A.8.24", "weight": 1.0, "sortOrder": 14, "isRequired": true },
+    { "code": "SVY-ISO27-TEC-05", "prompt": "Are security rules applied throughout the software development lifecycle (SDLC)?", "domainCode": "A.8", "controlCode": "A.8.25", "weight": 1.0, "sortOrder": 15, "isRequired": true },
+    { "code": "SVY-ISO27-TEC-06", "prompt": "Are dev/test/production environments separated to reduce unauthorized change/access risk?", "domainCode": "A.8", "controlCode": "A.8.31", "weight": 1.0, "sortOrder": 16, "isRequired": false }
+  ],
+  "_notes": {
+    "questionCount": 16,
+    "perThemeBreakdown": "5 Organizational, 3 People, 2 Physical, 6 Technological - weighted toward themes with the most controls (A.5/A.8), within the 10-30 recommended range in 07-survey.md",
+    "responseModel": "Each SurveyResponse uses SurveyResponseLevel (VeryLow..VeryHigh, NotApplicable) per 02-data-model.md; optional numeric Score override.",
+    "domainCode/controlCode": "Resolved to DomainId/ControlId at seed time by joining against the iso27001.json fixture (Framework must be seeded first)."
+  }
+}

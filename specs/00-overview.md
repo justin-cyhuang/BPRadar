@@ -91,3 +91,5 @@ out of scope for MVP; see Non-goals.)
 - `06-tech-stack.md` — technical architecture and coding ground rules
 - `07-survey.md` — recurring company profile survey and transformation tracking
 - `08-waf.md` — Azure Well-Architected Framework detailed control catalog and seed reference
+- `09-iso27001.md` — ISO/IEC 27001:2022 detailed control catalog and seed reference
+- `10-iso20000.md` — ISO/IEC 20000-1:2018 detailed control catalog and seed reference

@@ -1,0 +1,11 @@
+OrganizationName,FrameworkCode,FrameworkVersion,AssessmentLabel,AssessmentSnapshotDate,BaselineProfileName,ControlCode,DomainCode,ControlTitle,Status,Score,ScoreScale,EvidenceUrl,Notes,ExternalRecordId
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C4.3,C4,SMS scope,Compliant,,,https://contoso.example/evidence/c43,SMS scope statement approved and published,EXT-C43
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C5.2,C5,Policy,Compliant,,,,Service management policy signed by CIO,EXT-C52
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C6.2,C6,Service management objectives and planning,Partial,55,0-100,,Objectives set but not all measurable yet,EXT-C62
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C7.2,C7,Competence,Compliant,4,0-5,https://contoso.example/evidence/c72,Role-based training matrix in place,EXT-C72
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,OPS-07,OPS,Resolution and fulfilment - incident management,Compliant,88,0-100,https://contoso.example/evidence/ops07,Incident process ITIL-aligned with SLA tracking,EXT-OPS07
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,OPS-08,OPS,Resolution and fulfilment - problem management,Partial,45,0-100,,Root-cause analysis inconsistent across teams,EXT-OPS08
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,OPS-10,OPS,Service assurance - availability management,Yes,4,0-5,https://contoso.example/evidence/ops10,Availability targets tracked monthly against SLA,EXT-OPS10
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,OPS-12,OPS,Change management,No,,,,Emergency changes bypass CAB approval frequently,EXT-OPS12
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C9.2,C9,Internal audit,Not Assessed,,,,Next internal audit scheduled for Q4,EXT-C92
+Contoso Ltd,ISO20000_1,2018,2026 SMS Internal Review,2026-08-01,2026 Internal Target,C10.2,C10,Continual improvement,Partial,50,0-100,,Improvement register exists but review cadence inconsistent,EXT-C102

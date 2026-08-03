@@ -1,0 +1,11 @@
+OrganizationName,FrameworkCode,FrameworkVersion,AssessmentLabel,AssessmentSnapshotDate,BaselineProfileName,ControlCode,DomainCode,ControlTitle,Status,Score,ScoreScale,EvidenceUrl,Notes,ExternalRecordId
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.5.1,A.5,Policies for information security,Compliant,95,0-100,https://contoso.example/evidence/a501,Policy approved by CISO and reviewed annually,EXT-A501
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.5.9,A.5,Inventory of information and other associated assets,Partial,60,0-100,,Asset inventory exists but not fully reconciled quarterly,EXT-A509
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.5.23,A.5,Information security for use of cloud services,Yes,4,0-5,https://contoso.example/evidence/a523,Cloud security addendum signed with all cloud vendors,EXT-A523
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.6.3,A.6,"Information security awareness, education and training",Compliant,,,https://contoso.example/evidence/a603,Mandatory annual training completed org-wide,EXT-A603
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.7.2,A.7,Physical entry,Compliant,,,,Badge + biometric access on all data center entries,EXT-A702
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.7.9,A.7,Security of assets off-premises,N/A,,,,No off-premises assets in current scope,EXT-A709
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.8.7,A.8,Protection against malware,Compliant,90,0-100,https://contoso.example/evidence/a807,EDR deployed fleet-wide with daily signature updates,EXT-A807
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.8.24,A.8,Use of cryptography,No,,,,Key rotation policy not yet documented,EXT-A824
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.8.25,A.8,Secure development life cycle,Partial,50,0-100,,SDLC gates defined but not enforced in CI,EXT-A825
+Contoso Ltd,ISO27001_2022,2022,2026 ISMS Internal Review,2026-08-01,2026 Internal Target,A.8.32,A.8,Change management,Not Assessed,,,,Scheduled for next review cycle,EXT-A832
