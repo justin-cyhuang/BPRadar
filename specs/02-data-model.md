@@ -146,6 +146,40 @@ Uniqueness: one `BaselineTarget` per (`BaselineProfileId`, `FrameworkId`,
 Uniqueness: one `SurveyResponse` per (`SurveySubmissionId`, `SurveyQuestionId`)
 pair.
 
+### Issue
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| OrganizationId | int (FK → Organization) | scoped to org, not one framework — see `11-issue-matching.md` |
+| Title | string | short summary |
+| Description | string | free-text problem description |
+| RootCause | string | free-text root cause, sourced from an external RCA process |
+| MatchingStatus | enum `IssueMatchingStatus` | Pending / Matched / Failed |
+| MatchingError | string? | error/timeout detail when `Failed` |
+| CreatedAt | DateTime | |
+| MatchedAt | DateTime? | when matching last completed |
+
+### ControlKeyword
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| ControlId | int (FK → Control) | |
+| Keyword | string | short trigger phrase used as a match target — see `11-issue-matching.md` |
+
+### ViolationMatch
+| Field | Type | Notes |
+|---|---|---|
+| Id | int (PK) | |
+| IssueId | int (FK → Issue) | |
+| ControlId | int (FK → Control) | |
+| MatchedKeywords | string | LLM-extracted keywords that matched this Control's ControlKeywords |
+| MatchScore | decimal | fuzzy/word-overlap similarity score |
+| IsSelfAssessmentDiscrepancy | bool | true when Self-Reported State claimed compliance but this match implies a violation |
+| ReviewStatus | enum `ViolationMatchReviewStatus` | Open / Confirmed / Dismissed |
+| CreatedAt | DateTime | |
+
+Uniqueness: one `ViolationMatch` per (`IssueId`, `ControlId`) pair.
+
 ## Enums
 
 ```
@@ -153,6 +187,8 @@ enum ComplianceStatus { NotAssessed, Compliant, Partial, NonCompliant, NotApplic
 enum ResultSource { Manual, Import }
 enum SurveyCadence { Monthly, Quarterly, SemiAnnual, Annual }
 enum SurveyResponseLevel { VeryLow, Low, Medium, High, VeryHigh, NotApplicable }
+enum IssueMatchingStatus { Pending, Matched, Failed }
+enum ViolationMatchReviewStatus { Open, Confirmed, Dismissed }
 ```
 
 ## Relationships
@@ -168,6 +204,9 @@ Domain 1---* BaselineTarget (optional link)
 Organization 1---* Assessment *---1 Framework
 Assessment *---0..1 BaselineProfile
 Assessment 1---* AssessmentResult *---1 Control
+Organization 1---* Issue
+Control 1---* ControlKeyword
+Issue 1---* ViolationMatch *---1 Control
 ```
 
 ## Derived metrics (computed, not stored)

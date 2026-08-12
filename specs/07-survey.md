@@ -72,3 +72,6 @@ transformation momentum.
 - Survey does **not** replace detailed framework assessments; it provides
   regular pulse tracking between deeper assessments/import cycles.
 - Survey outputs are included in CSV/PDF reporting per `05-dashboard.md`.
+- `SurveyResponse.ResponseLevel` is one of the two Self-Reported State
+  sources consumed by `11-issue-matching.md` (alongside `AssessmentResult`),
+  compared against the Observed State from an Issue's Root Cause.
