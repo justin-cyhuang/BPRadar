@@ -12,6 +12,9 @@ final homes and this folder can be removed:
 | `frameworks/azure-waf.json` | `src/BPRadar.Web/Data/Seed/azure-waf.json` (loaded by the EF Core seeding routine, `02-data-model.md`) |
 | `frameworks/iso27001.json` | `src/BPRadar.Web/Data/Seed/iso27001.json` |
 | `frameworks/iso20000.json` | `src/BPRadar.Web/Data/Seed/iso20000.json` |
+| `control-keywords.json` | `src/BPRadar.Web/Data/Seed/control-keywords.json` |
+| `control-keywords.schema.json` | `src/BPRadar.Web/Data/Seed/control-keywords.schema.json` |
+| `control-keywords-authoring.md` | project documentation (offline refresh prompt/process) |
 | `survey/waf-survey-template.json` | `src/BPRadar.Web/Features/Surveys/Seed/waf-survey-template.json` |
 | `survey/iso27001-survey-template.json` | `src/BPRadar.Web/Features/Surveys/Seed/iso27001-survey-template.json` |
 | `survey/iso20000-survey-template.json` | `src/BPRadar.Web/Features/Surveys/Seed/iso20000-survey-template.json` |
@@ -34,6 +37,19 @@ final homes and this folder can be removed:
   `10-iso20000.md` §3. Includes a `_notes.warning` field flagging that the
   `OPS-xx` codes are BPRadar-curated and unverified against the paid standard
   — see `10-iso20000.md`'s confidence note before treating them as official.
+- **`control-keywords.json`** — static Control Keyword fixture for every
+  control in all three framework catalogs (59 WAF + 93 ISO 27001 + 32 ISO
+  20000-1 = 184 controls). Each entry has 2–5 lowercase trigger phrases
+  intended for the two-stage extraction/fuzzy-matching pipeline in
+  `11-issue-matching.md`. The future loader resolves `ControlId` from
+  `frameworkCode + controlCode` and upserts keywords using
+  `frameworkCode + controlCode + normalized keyword` as its idempotency key.
+- **`control-keywords.schema.json`** — JSON Schema for the Control Keyword
+  fixture. It fixes the current seed contract at `schemaVersion: 1` and
+  enforces the 2–5 keyword range and normalized phrase shape.
+- **`control-keywords-authoring.md`** — exact reusable authoring prompt,
+  deterministic catalog-to-prompt input command, output contract, and human
+  discrimination review checklist.
 - **`survey/waf-survey-template.json`** — a draft recurring Company Profile
   Survey template (`07-survey.md`) with 20 questions spanning all 5 WAF
   pillars, each mapped to a real `ControlCode`.
@@ -50,3 +66,31 @@ final homes and this folder can be removed:
   using real ISO 27001:2022 Annex A control codes (A.5/A.6/A.7/A.8).
 - **`samples/iso20000-import-sample.csv`** — same pattern as the WAF sample,
   using ISO 20000-1 clause codes (C4–C10, including curated `OPS-xx` items).
+
+## Control Keyword authoring and refresh process
+
+Control Keywords are authored once and committed; they are never generated at
+runtime. To refresh them after a catalog change:
+
+1. Follow `control-keywords-authoring.md` to export every changed control's
+   `code`, `title`, and paraphrased `description`, then run the documented
+   prompt to generate 2–5 candidate phrases per control.
+2. Review the suggestions against neighboring controls. Prefer phrases that
+   identify the control's distinct failure mode (for example, `restore test
+   failed` for backup) over generic words such as `process`, `risk`,
+   `security`, `management`, or `failure` on their own.
+3. Normalize phrases to lowercase, trim whitespace, remove duplicates within a
+   control, and keep each phrase short enough for fuzzy/word-overlap matching.
+   Overlap between frameworks is intentional when controls are genuine
+   equivalents; overlap between unrelated controls should be removed.
+4. Add/remove control entries so the fixture exactly matches all three
+   framework catalogs, update `authoring.lastReviewed`, then run:
+
+   ```powershell
+   & .\seed-data\tests\control-keywords.tests.ps1
+   ```
+
+   The validation checks the JSON Schema, exact cross-catalog coverage,
+   one entry per control, the 184-control baseline, normalized uniqueness, and
+   the required 2–5 keywords per control. Update the expected baseline count
+   when a catalog revision legitimately changes it.
