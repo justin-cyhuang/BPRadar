@@ -1,0 +1,27 @@
+namespace BPRadar.Web.Features.IssueMatching;
+
+public sealed class IssueMatchingOptions
+{
+    public const string SectionName = "IssueMatching";
+
+    public string LlmProvider { get; set; } = "GitHubModels";
+
+    public double MatchThreshold { get; set; } = 0.72;
+
+    public string ControlKeywordSeedPath { get; set; } =
+        "seed-data/control-keywords.json";
+
+    public GitHubModelsOptions GitHubModels { get; set; } = new();
+}
+
+public sealed class GitHubModelsOptions
+{
+    public string Endpoint { get; set; } =
+        "https://models.github.ai/inference/chat/completions";
+
+    public string Model { get; set; } = "openai/gpt-4.1-mini";
+
+    public string? Token { get; set; }
+
+    public int TimeoutSeconds { get; set; } = 30;
+}

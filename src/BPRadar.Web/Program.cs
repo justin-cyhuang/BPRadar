@@ -1,5 +1,6 @@
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
+using BPRadar.Web.Features.IssueMatching;
 using BPRadar.Web.Features.Surveys;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
@@ -10,6 +11,9 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<BPRadarDbContext>(
     options => options.UseSqlite(connectionString));
 builder.Services.AddRazorPages();
+builder.Services.AddIssueMatching(
+    builder.Configuration,
+    builder.Environment.ContentRootPath);
 
 var app = builder.Build();
 BPRadarTrace.Configure(builder.Configuration, builder.Environment);
@@ -30,6 +34,9 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 app.MapRazorPages();
 app.MapSurveyEndpoints();
+app.MapPost(
+    "/api/issue-matching/candidates",
+    IssueMatchingEndpoint.MatchCandidatesAsync);
 app.MapGet("/", () => Results.Redirect("/Admin/SurveyTemplates"));
 app.Run();
 
