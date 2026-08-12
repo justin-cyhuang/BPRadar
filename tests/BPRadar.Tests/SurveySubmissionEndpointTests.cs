@@ -106,6 +106,50 @@ public sealed class SurveySubmissionEndpointTests
     }
 
     [TestMethod]
+    public async Task Submission_rejects_a_duplicate_organization_template_and_snapshot_date()
+    {
+        await using var application = SurveyApplication.Create();
+        using var client = application.CreateClient();
+        var organizationId = await application.CreateOrganizationAsync("Contoso");
+        var template = await GetActiveTemplateAsync(
+            client,
+            "Azure WAF Transformation Pulse");
+        var snapshotDate = DateTime.UtcNow.Date;
+        var submission = new CreateSurveySubmissionRequest(
+            template.Id,
+            "Initial pulse",
+            snapshotDate,
+            null,
+            template.Questions
+                .Select(question => new SurveyAnswerRequest(
+                    question.Id,
+                    "High",
+                    null))
+                .ToArray());
+        using var firstResponse = await client.PostAsJsonAsync(
+            $"/api/organizations/{organizationId}/survey-submissions",
+            submission);
+        Assert.AreEqual(HttpStatusCode.Created, firstResponse.StatusCode);
+
+        using var duplicateResponse = await client.PostAsJsonAsync(
+            $"/api/organizations/{organizationId}/survey-submissions",
+            submission with { Label = "Duplicate pulse" });
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, duplicateResponse.StatusCode);
+        var problem = await duplicateResponse.Content
+            .ReadFromJsonAsync<ValidationProblemDetails>();
+        Assert.IsNotNull(problem);
+        StringAssert.Contains(
+            problem.Errors["SnapshotDate"].Single(),
+            "already submitted for this snapshot date");
+        var latest = await client.GetFromJsonAsync<SurveySubmissionDetail[]>(
+            $"/api/organizations/{organizationId}/survey-submissions/latest");
+        Assert.IsNotNull(latest);
+        Assert.HasCount(1, latest);
+        Assert.AreEqual("Initial pulse", latest[0].Label);
+    }
+
+    [TestMethod]
     public async Task Submission_rejects_an_unanswered_required_question()
     {
         await using var application = SurveyApplication.Create();

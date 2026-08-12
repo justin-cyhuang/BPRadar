@@ -89,7 +89,7 @@ public sealed class BPRadarDbContext(DbContextOptions<BPRadarDbContext> options)
                 submission.OrganizationId,
                 submission.SurveyTemplateId,
                 submission.SnapshotDate
-            });
+            }).IsUnique();
         });
 
         modelBuilder.Entity<SurveyResponse>(entity =>

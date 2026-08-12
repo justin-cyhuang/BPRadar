@@ -1,5 +1,6 @@
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 
@@ -47,12 +48,25 @@ public static class SurveySubmissionService
                 "A submission label is required.");
         }
 
+        var snapshotDate = request.SnapshotDate.Date;
         if (request.SnapshotDate == default ||
-            request.SnapshotDate.Date > DateTime.UtcNow.Date)
+            snapshotDate > DateTime.UtcNow.Date)
         {
             return SurveySubmissionCreateResult.Invalid(
                 "SnapshotDate",
                 "Snapshot date must be valid and cannot be later than the current UTC date.");
+        }
+
+        if (await dbContext.SurveySubmissions.AnyAsync(
+                submission =>
+                    submission.OrganizationId == organizationId &&
+                    submission.SurveyTemplateId == request.SurveyTemplateId &&
+                    submission.SnapshotDate == snapshotDate,
+                cancellationToken))
+        {
+            return SurveySubmissionCreateResult.Invalid(
+                "SnapshotDate",
+                DuplicateSnapshotMessage(snapshotDate));
         }
 
         var answers = request.Answers ?? [];
@@ -127,7 +141,7 @@ public static class SurveySubmissionService
             OrganizationId = organizationId,
             SurveyTemplate = template,
             Label = request.Label,
-            SnapshotDate = request.SnapshotDate,
+            SnapshotDate = snapshotDate,
             SubmittedAt = now,
             Notes = request.Notes
         };
@@ -146,7 +160,21 @@ public static class SurveySubmissionService
         }
 
         dbContext.SurveySubmissions.Add(submission);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception)
+            when (exception.InnerException is SqliteException
+            {
+                SqliteExtendedErrorCode: 2067
+            })
+        {
+            return SurveySubmissionCreateResult.Invalid(
+                "SnapshotDate",
+                DuplicateSnapshotMessage(snapshotDate));
+        }
+
         var traceDetails =
             $"organizationId={organizationId} surveyTemplateId={template.Id} " +
             $"surveySubmissionId={submission.Id} responses={submission.Responses.Count}";
@@ -204,6 +232,9 @@ public static class SurveySubmissionService
                     response.Score,
                     response.Notes))
                 .ToArray());
+
+    private static string DuplicateSnapshotMessage(DateTime snapshotDate) =>
+        $"A survey response was already submitted for this snapshot date ({snapshotDate:yyyy-MM-dd}).";
 }
 
 public sealed record CreateSurveySubmissionRequest(
