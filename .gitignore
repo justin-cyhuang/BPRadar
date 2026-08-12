@@ -8,6 +8,7 @@ obj/
 *.db-shm
 *.db-wal
 bpradar.db
+logs/
 
 # IDE
 .vs/

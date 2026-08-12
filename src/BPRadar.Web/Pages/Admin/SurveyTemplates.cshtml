@@ -1,0 +1,40 @@
+@page "/Admin/SurveyTemplates"
+@model BPRadar.Web.Pages.Admin.SurveyTemplatesModel
+@{
+    ViewData["Title"] = "Survey templates";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - BPRadar</title>
+</head>
+<body>
+    <main>
+        <h1>Survey templates</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Framework</th>
+                    <th>Cadence</th>
+                    <th>Questions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var template in Model.Templates)
+                {
+                    <tr>
+                        <td>@template.Name</td>
+                        <td>@template.Framework</td>
+                        <td>@template.Cadence</td>
+                        <td>@template.QuestionCount</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </main>
+</body>
+</html>
