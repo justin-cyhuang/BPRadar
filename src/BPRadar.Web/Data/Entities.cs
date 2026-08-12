@@ -72,3 +72,47 @@ public sealed class SurveyQuestion
     public Domain? Domain { get; set; }
     public Control? Control { get; set; }
 }
+
+public sealed class Organization
+{
+    public int Id { get; set; }
+    public required string Name { get; set; }
+    public string? Notes { get; set; }
+    public ICollection<SurveySubmission> SurveySubmissions { get; } = [];
+}
+
+public sealed class SurveySubmission
+{
+    public int Id { get; set; }
+    public int OrganizationId { get; set; }
+    public int SurveyTemplateId { get; set; }
+    public required string Label { get; set; }
+    public DateTime SnapshotDate { get; set; }
+    public DateTime SubmittedAt { get; set; }
+    public string? Notes { get; set; }
+    public Organization Organization { get; set; } = null!;
+    public SurveyTemplate SurveyTemplate { get; set; } = null!;
+    public ICollection<SurveyResponse> Responses { get; } = [];
+}
+
+public enum SurveyResponseLevel
+{
+    VeryLow,
+    Low,
+    Medium,
+    High,
+    VeryHigh,
+    NotApplicable
+}
+
+public sealed class SurveyResponse
+{
+    public int Id { get; set; }
+    public int SurveySubmissionId { get; set; }
+    public int SurveyQuestionId { get; set; }
+    public SurveyResponseLevel ResponseLevel { get; set; }
+    public decimal? Score { get; set; }
+    public string? Notes { get; set; }
+    public SurveySubmission SurveySubmission { get; set; } = null!;
+    public SurveyQuestion SurveyQuestion { get; set; } = null!;
+}
