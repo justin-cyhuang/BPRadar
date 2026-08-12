@@ -3,9 +3,8 @@
 ## Platform
 - **Language**: C#
 - **Runtime**: **.NET Core 10**
-- **Web framework**: ASP.NET Core, using **Blazor Server** (or Razor
-  Pages/MVC — final choice made at Phase 1 bootstrap time, documented here
-  once decided) to deliver a dynamic, server-rendered website with
+- **Web framework**: ASP.NET Core using **Razor Pages** to deliver a dynamic,
+  server-rendered website with
   interactive components (checklist forms, import wizard, dashboard/radar
   chart) without needing a separate JS framework/build pipeline.
 - **Single deployable**: one ASP.NET Core project hosts both the UI and the
@@ -98,7 +97,7 @@ is hand-rolled with no new package.
 BPRadar/
   specs/                     # this folder — source of truth for requirements
   src/
-    BPRadar.Web/             # ASP.NET Core (Blazor Server) project
+    BPRadar.Web/             # ASP.NET Core Razor Pages project
       Data/                  # DbContext, EF Core entities, migrations
       Features/
         Frameworks/          # framework/domain/control seed + read APIs
