@@ -1,0 +1,266 @@
+{
+  "framework": {
+    "code": "ISO20000_1",
+    "name": "ISO/IEC 20000-1",
+    "version": "2018",
+    "description": "Service management system (SMS) requirements standard.",
+    "sourceUrl": "https://www.iso.org/standard/70636.html"
+  },
+  "domains": [
+    {
+      "code": "C4",
+      "name": "Context of the organization",
+      "sortOrder": 1,
+      "numberingConfidence": "high",
+      "controls": [
+        {
+          "code": "C4.1",
+          "title": "Organization and its context",
+          "description": "Determine internal/external issues relevant to the SMSs purpose.",
+          "sortOrder": 1
+        },
+        {
+          "code": "C4.2",
+          "title": "Interested parties",
+          "description": "Identify interested parties and their service management requirements.",
+          "sortOrder": 2
+        },
+        {
+          "code": "C4.3",
+          "title": "SMS scope",
+          "description": "Define and document the scope of the service management system.",
+          "sortOrder": 3
+        },
+        {
+          "code": "C4.4",
+          "title": "SMS and its processes",
+          "description": "Establish, implement, maintain, and continually improve the SMS.",
+          "sortOrder": 4
+        }
+      ]
+    },
+    {
+      "code": "C5",
+      "name": "Leadership",
+      "sortOrder": 2,
+      "numberingConfidence": "high",
+      "controls": [
+        {
+          "code": "C5.1",
+          "title": "Leadership and commitment",
+          "description": "Top management demonstrates leadership/commitment to the SMS.",
+          "sortOrder": 1
+        },
+        {
+          "code": "C5.2",
+          "title": "Policy",
+          "description": "Establish a service management policy appropriate to the organization.",
+          "sortOrder": 2
+        },
+        {
+          "code": "C5.3",
+          "title": "Roles, responsibilities and authorities",
+          "description": "Assign and communicate SMS-relevant roles and authorities.",
+          "sortOrder": 3
+        }
+      ]
+    },
+    {
+      "code": "C6",
+      "name": "Planning",
+      "sortOrder": 3,
+      "numberingConfidence": "high",
+      "controls": [
+        {
+          "code": "C6.1",
+          "title": "Actions to address risks and opportunities",
+          "description": "Plan actions addressing SMS risks/opportunities identified in context analysis.",
+          "sortOrder": 1
+        },
+        {
+          "code": "C6.2",
+          "title": "Service management objectives and planning",
+          "description": "Set measurable service management objectives and plans to achieve them.",
+          "sortOrder": 2
+        },
+        {
+          "code": "C6.3",
+          "title": "Plan the SMS",
+          "description": "Plan changes to the SMS in a controlled, consistent manner.",
+          "sortOrder": 3
+        }
+      ]
+    },
+    {
+      "code": "C7",
+      "name": "Support of the SMS",
+      "sortOrder": 4,
+      "numberingConfidence": "high",
+      "controls": [
+        {
+          "code": "C7.1",
+          "title": "Resources",
+          "description": "Determine and provide resources needed for the SMS.",
+          "sortOrder": 1
+        },
+        {
+          "code": "C7.2",
+          "title": "Competence",
+          "description": "Ensure people doing SMS-relevant work are competent.",
+          "sortOrder": 2
+        },
+        {
+          "code": "C7.3",
+          "title": "Awareness",
+          "description": "Ensure relevant personnel are aware of the service policy and their contribution.",
+          "sortOrder": 3
+        },
+        {
+          "code": "C7.4",
+          "title": "Communication",
+          "description": "Determine internal/external communications relevant to the SMS.",
+          "sortOrder": 4
+        },
+        {
+          "code": "C7.5",
+          "title": "Documented information",
+          "description": "Maintain documented information required by the SMS and the standard.",
+          "sortOrder": 5
+        }
+      ]
+    },
+    {
+      "code": "OPS",
+      "name": "Operation (service management processes)",
+      "sortOrder": 5,
+      "numberingConfidence": "representative_only_pending_verification",
+      "controls": [
+        {
+          "code": "OPS-01",
+          "title": "Operational planning and control",
+          "description": "Plan, implement, and control processes needed to meet service requirements.",
+          "sortOrder": 1
+        },
+        {
+          "code": "OPS-02",
+          "title": "Service portfolio management",
+          "description": "Define, agree, and maintain the portfolio of services offered.",
+          "sortOrder": 2
+        },
+        {
+          "code": "OPS-03",
+          "title": "Relationship and agreement management",
+          "description": "Manage business/customer/supplier relationships and service level agreements.",
+          "sortOrder": 3
+        },
+        {
+          "code": "OPS-04",
+          "title": "Supply and demand management",
+          "description": "Manage demand for services and ensure adequate supply/capacity.",
+          "sortOrder": 4
+        },
+        {
+          "code": "OPS-05",
+          "title": "Service design",
+          "description": "Design new/changed services to meet agreed requirements.",
+          "sortOrder": 5
+        },
+        {
+          "code": "OPS-06",
+          "title": "Service transition",
+          "description": "Control the transition of new/changed services into live operation.",
+          "sortOrder": 6
+        },
+        {
+          "code": "OPS-07",
+          "title": "Resolution and fulfilment - incident management",
+          "description": "Manage incidents to restore agreed service levels as quickly as possible.",
+          "sortOrder": 7
+        },
+        {
+          "code": "OPS-08",
+          "title": "Resolution and fulfilment - problem management",
+          "description": "Identify and manage root causes of incidents to prevent recurrence.",
+          "sortOrder": 8
+        },
+        {
+          "code": "OPS-09",
+          "title": "Resolution and fulfilment - service request management",
+          "description": "Manage the lifecycle of service requests from users.",
+          "sortOrder": 9
+        },
+        {
+          "code": "OPS-10",
+          "title": "Service assurance - availability management",
+          "description": "Ensure services meet agreed availability commitments.",
+          "sortOrder": 10
+        },
+        {
+          "code": "OPS-11",
+          "title": "Service assurance - information security management",
+          "description": "Manage information security risks within service delivery.",
+          "sortOrder": 11
+        },
+        {
+          "code": "OPS-12",
+          "title": "Change management",
+          "description": "Control changes to services/components in a managed, risk-aware manner.",
+          "sortOrder": 12
+        }
+      ]
+    },
+    {
+      "code": "C9",
+      "name": "Performance evaluation",
+      "sortOrder": 6,
+      "numberingConfidence": "high",
+      "controls": [
+        {
+          "code": "C9.1",
+          "title": "Monitoring, measurement, analysis and evaluation",
+          "description": "Monitor/measure SMS and service performance against objectives.",
+          "sortOrder": 1
+        },
+        {
+          "code": "C9.2",
+          "title": "Internal audit",
+          "description": "Conduct planned internal audits of the SMS.",
+          "sortOrder": 2
+        },
+        {
+          "code": "C9.3",
+          "title": "Management review",
+          "description": "Top management periodically reviews the SMS for continuing suitability.",
+          "sortOrder": 3
+        }
+      ]
+    },
+    {
+      "code": "C10",
+      "name": "Improvement",
+      "sortOrder": 7,
+      "numberingConfidence": "high",
+      "controls": [
+        {
+          "code": "C10.1",
+          "title": "Nonconformity and corrective action",
+          "description": "Identify nonconformities and take corrective action.",
+          "sortOrder": 1
+        },
+        {
+          "code": "C10.2",
+          "title": "Continual improvement",
+          "description": "Continually improve the suitability/adequacy/effectiveness of the SMS.",
+          "sortOrder": 2
+        }
+      ]
+    }
+  ],
+  "_notes": {
+    "guidanceUrlPattern": "https://www.iso.org/standard/70636.html (no free per-item pages published by ISO; use standard landing page for all items)",
+    "keyForIdempotentSeed": "framework.code + control.code",
+    "totalItems": 32,
+    "sourceSpec": "specs/10-iso20000.md",
+    "warning": "OPS-xx codes under the Operation domain are BPRadar-curated representative items, NOT verified official ISO/IEC 20000-1:2018 subclause numbers. See specs/10-iso20000.md confidence note before treating as authoritative."
+  }
+}

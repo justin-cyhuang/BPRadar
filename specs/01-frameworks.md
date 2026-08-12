@@ -25,6 +25,9 @@ frameworks map onto that structure, and how a new framework is added later.
     paywalled full text)
 - Assessment status per control uses the shared status enum in
   `02-data-model.md` (Compliant / Partial / Non-compliant / N/A).
+- **Full control catalog, seeding shape, and reference links: see
+  `09-iso27001.md`** — that file is the authoritative ISO 27001 seed-data
+  spec; keep this section as the short summary only.
 
 ## 2. ISO/IEC 20000-1 — Service Management System (SMS)
 - **Framework**: `ISO/IEC 20000-1`
@@ -40,6 +43,11 @@ frameworks map onto that structure, and how a new framework is added later.
 - **Control** = individual requirement/clause item under each domain (e.g.
   "Incident management process is defined and followed"), with the same
   code/title/description/status shape as above.
+- **Full control catalog, seeding shape, and reference links: see
+  `10-iso20000.md`** — that file is the authoritative ISO 20000-1 seed-data
+  spec; keep this section as the short summary only. Note: `10-iso20000.md`
+  flags that its clause-8 item numbering is a curated approximation pending
+  verification against the full paid standard text.
 
 ## 3. Microsoft Azure Well-Architected Framework (WAF)
 - **Framework**: `Azure Well-Architected Framework`

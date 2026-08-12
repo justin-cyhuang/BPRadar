@@ -57,7 +57,12 @@ out of scope for MVP; see Non-goals.)
 - **Live/automated data pulls** from Microsoft APIs (e.g. Microsoft Defender
   for Cloud Secure Score, Azure Policy compliance) — data entry is manual or
   file-import only in MVP; this is called out as a future enhancement.
-- **Advanced analytics** (forecasting/predictive scoring/ML) is out of scope.
+- **Advanced analytics** (forecasting/predictive scoring/ML) is out of scope
+  — **exception:** `11-issue-matching.md` uses a live LLM call to extract
+  keywords from Issue root causes for violation matching; this narrow,
+  explicitly-approved exception is documented in
+  `docs/adr/0001-llm-based-issue-matching.md` and does not change the
+  no-ML stance for the rest of the app.
 - **Reproducing full standard text.** ISO 27001 and ISO 20000 are paid
   standards; BPRadar stores only control codes, short titles, and brief
   paraphrased descriptions sufficient for mapping and assessment — not the
@@ -91,3 +96,7 @@ out of scope for MVP; see Non-goals.)
 - `06-tech-stack.md` — technical architecture and coding ground rules
 - `07-survey.md` — recurring company profile survey and transformation tracking
 - `08-waf.md` — Azure Well-Architected Framework detailed control catalog and seed reference
+- `09-iso27001.md` — ISO/IEC 27001:2022 detailed control catalog and seed reference
+- `10-iso20000.md` — ISO/IEC 20000-1:2018 detailed control catalog and seed reference
+- `11-issue-matching.md` — issue-to-best-practice-violation matching
+  (LLM-assisted keyword extraction, Self-Assessment Discrepancy detection)

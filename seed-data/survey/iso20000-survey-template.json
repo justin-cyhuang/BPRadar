@@ -1,0 +1,32 @@
+{
+  "surveyTemplate": {
+    "name": "ISO 20000-1 SMS Transformation Pulse",
+    "frameworkCode": "ISO20000_1",
+    "description": "Lightweight recurring pulse covering the ISO/IEC 20000-1:2018 clause groups, with emphasis on the Operation (service management process) domain. Complements full ISO 20000-1 Assessments (04-import.md/03-manual-entry.md) with a quarterly SMS maturity check-in (07-survey.md). Note: OPS-xx codes referenced here are the curated items defined in 10-iso20000.md §3.5, pending verification against the official standard text.",
+    "cadence": "Quarterly",
+    "isActive": true
+  },
+  "questions": [
+    { "code": "SVY-ISO20-C4-01", "prompt": "Is the scope of the service management system (SMS) clearly defined and documented?", "domainCode": "C4", "controlCode": "C4.3", "weight": 1.0, "sortOrder": 1, "isRequired": true },
+    { "code": "SVY-ISO20-C5-01", "prompt": "Does top management actively demonstrate leadership/commitment to the SMS?", "domainCode": "C5", "controlCode": "C5.1", "weight": 1.0, "sortOrder": 2, "isRequired": true },
+    { "code": "SVY-ISO20-C6-01", "prompt": "Are service management objectives set and measurable, with plans to achieve them?", "domainCode": "C6", "controlCode": "C6.2", "weight": 1.0, "sortOrder": 3, "isRequired": true },
+    { "code": "SVY-ISO20-C7-01", "prompt": "Is competence of SMS-relevant personnel ensured (training, qualification, experience)?", "domainCode": "C7", "controlCode": "C7.2", "weight": 1.0, "sortOrder": 4, "isRequired": true },
+
+    { "code": "SVY-ISO20-OPS-01", "prompt": "Is the service portfolio defined, agreed, and kept current?", "domainCode": "OPS", "controlCode": "OPS-02", "weight": 1.0, "sortOrder": 5, "isRequired": true },
+    { "code": "SVY-ISO20-OPS-02", "prompt": "Are service level agreements actively managed with business/customers/suppliers?", "domainCode": "OPS", "controlCode": "OPS-03", "weight": 1.0, "sortOrder": 6, "isRequired": true },
+    { "code": "SVY-ISO20-OPS-03", "prompt": "Is capacity/demand for services planned ahead of predictable changes?", "domainCode": "OPS", "controlCode": "OPS-04", "weight": 1.0, "sortOrder": 7, "isRequired": true },
+    { "code": "SVY-ISO20-OPS-04", "prompt": "Are incidents resolved against agreed service levels, with clear ownership?", "domainCode": "OPS", "controlCode": "OPS-07", "weight": 1.0, "sortOrder": 8, "isRequired": true },
+    { "code": "SVY-ISO20-OPS-05", "prompt": "Is root-cause (problem management) analysis performed to prevent incident recurrence?", "domainCode": "OPS", "controlCode": "OPS-08", "weight": 1.0, "sortOrder": 9, "isRequired": true },
+    { "code": "SVY-ISO20-OPS-06", "prompt": "Are availability commitments tracked and met against agreed SLAs?", "domainCode": "OPS", "controlCode": "OPS-10", "weight": 1.0, "sortOrder": 10, "isRequired": true },
+    { "code": "SVY-ISO20-OPS-07", "prompt": "Are changes to services/components controlled through a managed, risk-aware change process?", "domainCode": "OPS", "controlCode": "OPS-12", "weight": 1.0, "sortOrder": 11, "isRequired": true },
+
+    { "code": "SVY-ISO20-C9-01", "prompt": "Are internal audits of the SMS planned and conducted regularly?", "domainCode": "C9", "controlCode": "C9.2", "weight": 1.0, "sortOrder": 12, "isRequired": true },
+    { "code": "SVY-ISO20-C10-01", "prompt": "Are nonconformities identified and corrective actions tracked to closure?", "domainCode": "C10", "controlCode": "C10.1", "weight": 1.0, "sortOrder": 13, "isRequired": false }
+  ],
+  "_notes": {
+    "questionCount": 13,
+    "perDomainBreakdown": "1 each for C4/C5/C6/C7, 6 for OPS (Operation, the highest-real-world-weight domain), 1 for C9, 1 for C10 - within the 10-30 recommended range in 07-survey.md",
+    "responseModel": "Each SurveyResponse uses SurveyResponseLevel (VeryLow..VeryHigh, NotApplicable) per 02-data-model.md; optional numeric Score override.",
+    "domainCode/controlCode": "Resolved to DomainId/ControlId at seed time by joining against the iso20000.json fixture (Framework must be seeded first)."
+  }
+}

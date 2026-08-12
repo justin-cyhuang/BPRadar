@@ -1,0 +1,121 @@
+{
+  "framework": {
+    "code": "AZURE_WAF",
+    "name": "Azure Well-Architected Framework",
+    "version": "2026-07",
+    "description": "Microsoft's cross-cutting architecture benchmark: 5 pillars, 59 design-review checklist controls.",
+    "sourceUrl": "https://learn.microsoft.com/en-us/azure/well-architected/"
+  },
+  "domains": [
+    {
+      "code": "RE",
+      "name": "Reliability",
+      "sortOrder": 1,
+      "pillarPath": "reliability",
+      "checklistUrl": "https://learn.microsoft.com/en-us/azure/well-architected/reliability/checklist",
+      "controls": [
+        { "code": "RE:01", "slug": "simplify", "title": "Simplicity & efficiency", "description": "Keep the design as simple as the business requirements allow; avoid unneeded complexity.", "sortOrder": 1 },
+        { "code": "RE:02", "slug": "identify-flows", "title": "Flow identification & criticality", "description": "Enumerate user/system flows and rank them by business criticality.", "sortOrder": 2 },
+        { "code": "RE:03", "slug": "failure-mode-analysis", "title": "Failure mode analysis", "description": "Systematically identify dependencies, failure points, and mitigations (FMEA-style).", "sortOrder": 3 },
+        { "code": "RE:04", "slug": "metrics", "title": "Reliability targets", "description": "Set explicit availability/recovery targets (SLO/RTO/RPO) to drive design and health modeling.", "sortOrder": 4 },
+        { "code": "RE:05", "slug": "redundancy", "title": "Redundancy", "description": "Add redundant components/instances for critical flows to meet reliability targets.", "sortOrder": 5 },
+        { "code": "RE:06", "slug": "scaling", "title": "Scaling strategy", "description": "Implement timely, mostly-automatic scaling across app/data/infra tiers.", "sortOrder": 6 },
+        { "code": "RE:07", "slug": "self-preservation", "title": "Self-healing", "description": "Build in self-preservation/self-healing so the workload degrades gracefully and recovers.", "sortOrder": 7 },
+        { "code": "RE:08", "slug": "reliability-test", "title": "Resiliency testing / chaos engineering", "description": "Proactively test failure and load scenarios rather than waiting for real incidents.", "sortOrder": 8 },
+        { "code": "RE:09", "slug": "disaster-recovery", "title": "Disaster recovery plans", "description": "Maintain a tested, documented DR plan covering the whole system, not just pieces.", "sortOrder": 9 },
+        { "code": "RE:10", "slug": "monitoring", "title": "Health monitoring", "description": "Continuously track uptime/reliability signals to support detection and post-incident review.", "sortOrder": 10 }
+      ]
+    },
+    {
+      "code": "SE",
+      "name": "Security",
+      "sortOrder": 2,
+      "pillarPath": "security",
+      "checklistUrl": "https://learn.microsoft.com/en-us/azure/well-architected/security/checklist",
+      "controls": [
+        { "code": "SE:01", "slug": "establish-baseline", "title": "Security baseline", "description": "Define a security baseline aligned to compliance/industry/platform norms and measure against it.", "sortOrder": 1 },
+        { "code": "SE:02", "slug": "secure-development-lifecycle", "title": "Secure SDLC", "description": "Bake security into every phase of the development lifecycle.", "sortOrder": 2 },
+        { "code": "SE:03", "slug": "data-classification", "title": "Data classification", "description": "Label data/systems by sensitivity to drive design and prioritization decisions.", "sortOrder": 3 },
+        { "code": "SE:04", "slug": "segmentation", "title": "Segmentation", "description": "Create intentional boundaries across network, identity, and resource organization.", "sortOrder": 4 },
+        { "code": "SE:05", "slug": "identity-access", "title": "Identity & access management", "description": "Enforce least-privilege, auditable, modern IAM for all users/components.", "sortOrder": 5 },
+        { "code": "SE:06", "slug": "networking", "title": "Network controls", "description": "Filter and isolate ingress/egress traffic with defense-in-depth.", "sortOrder": 6 },
+        { "code": "SE:07", "slug": "encryption", "title": "Encryption", "description": "Encrypt data at rest/in transit using modern, platform-native methods aligned to classification.", "sortOrder": 7 },
+        { "code": "SE:08", "slug": "harden-resources", "title": "Hardening", "description": "Reduce attack surface by tightening configuration on every component.", "sortOrder": 8 },
+        { "code": "SE:09", "slug": "application-secrets", "title": "Secrets management", "description": "Protect, rotate, and audit application secrets.", "sortOrder": 9 },
+        { "code": "SE:10", "slug": "monitor-threats", "title": "Threat detection", "description": "Run a holistic, modern threat-monitoring strategy feeding SecOps processes.", "sortOrder": 10 },
+        { "code": "SE:11", "slug": "test", "title": "Security testing", "description": "Combine testing approaches to validate prevention and detection controls.", "sortOrder": 11 },
+        { "code": "SE:12", "slug": "incident-response", "title": "Incident response", "description": "Define and rehearse incident response procedures with clear ownership.", "sortOrder": 12 }
+      ]
+    },
+    {
+      "code": "CO",
+      "name": "Cost Optimization",
+      "sortOrder": 3,
+      "pillarPath": "cost-optimization",
+      "checklistUrl": "https://learn.microsoft.com/en-us/azure/well-architected/cost-optimization/checklist",
+      "controls": [
+        { "code": "CO:01", "slug": "create-culture-financial-responsibility", "title": "Financial responsibility culture", "description": "Train teams and foster spend accountability and automation.", "sortOrder": 1 },
+        { "code": "CO:02", "slug": "cost-model", "title": "Cost model", "description": "Maintain an estimate of initial/run-rate/ongoing costs with budget buffer.", "sortOrder": 2 },
+        { "code": "CO:03", "slug": "collect-review-cost-data", "title": "Cost data review", "description": "Capture daily cost data, trends, forecasts; automate anomaly alerts.", "sortOrder": 3 },
+        { "code": "CO:04", "slug": "set-spending-guardrails", "title": "Spending guardrails", "description": "Use policy/limits/gates to prevent overspend, favoring automation.", "sortOrder": 4 },
+        { "code": "CO:05", "slug": "get-best-rates", "title": "Best rates", "description": "Regularly review pricing tiers/models/commitments/purchasing plans.", "sortOrder": 5 },
+        { "code": "CO:06", "slug": "align-usage-to-billing-increments", "title": "Billing alignment", "description": "Match resource usage patterns to how the service actually bills.", "sortOrder": 6 },
+        { "code": "CO:07", "slug": "optimize-component-costs", "title": "Component cost optimization", "description": "Remove/right-size unneeded or underused features and resources.", "sortOrder": 7 },
+        { "code": "CO:08", "slug": "optimize-environment-costs", "title": "Environment cost optimization", "description": "Align spend across prod/non-prod/DR environments to actual need.", "sortOrder": 8 },
+        { "code": "CO:09", "slug": "optimize-flow-costs", "title": "Flow cost optimization", "description": "Spend proportional to each flow's business priority.", "sortOrder": 9 },
+        { "code": "CO:10", "slug": "optimize-data-costs", "title": "Data cost optimization", "description": "Tune tiering, retention, replication, and storage format for cost.", "sortOrder": 10 },
+        { "code": "CO:11", "slug": "optimize-code-costs", "title": "Code cost optimization", "description": "Adjust code so it needs fewer/cheaper resources for the same requirements.", "sortOrder": 11 },
+        { "code": "CO:12", "slug": "optimize-scaling-costs", "title": "Scaling cost optimization", "description": "Choose scale-unit configurations and demand-shaping to control cost.", "sortOrder": 12 },
+        { "code": "CO:13", "slug": "optimize-personnel-time", "title": "Personnel time optimization", "description": "Reduce toil (noisy alerts, slow builds, poor debugging) that wastes engineer time.", "sortOrder": 13 },
+        { "code": "CO:14", "slug": "consolidation", "title": "Consolidation", "description": "Increase density and reuse shared/centralized resources where possible.", "sortOrder": 14 }
+      ]
+    },
+    {
+      "code": "OE",
+      "name": "Operational Excellence",
+      "sortOrder": 4,
+      "pillarPath": "operational-excellence",
+      "checklistUrl": "https://learn.microsoft.com/en-us/azure/well-architected/operational-excellence/checklist",
+      "controls": [
+        { "code": "OE:01", "slug": "devops-culture", "title": "DevOps culture", "description": "Define shared practices and a blameless, continuous-improvement culture.", "sortOrder": 1 },
+        { "code": "OE:02", "slug": "formalize-operations-tasks", "title": "Standardize operations", "description": "Make routine/ad-hoc/emergency operations consistent and predictable.", "sortOrder": 2 },
+        { "code": "OE:03", "slug": "formalize-development-practices", "title": "Standardize development", "description": "Formalize and make transparent the full software delivery lifecycle.", "sortOrder": 3 },
+        { "code": "OE:04", "slug": "tools-processes", "title": "Tooling & process standards", "description": "Standardize tools, source control, patterns, and documentation.", "sortOrder": 4 },
+        { "code": "OE:05", "slug": "infrastructure-as-code-design", "title": "Infrastructure as code", "description": "Provision via IaC, preferring declarative approaches, for consistency.", "sortOrder": 5 },
+        { "code": "OE:06", "slug": "workload-supply-chain", "title": "Deployment supply chain", "description": "Drive change through automated, tested pipelines across environments.", "sortOrder": 6 },
+        { "code": "OE:07", "slug": "observability", "title": "Observability / instrumentation", "description": "Design telemetry/metrics/logging that validates decisions and guides improvement.", "sortOrder": 7 },
+        { "code": "OE:08", "slug": "incident-response", "title": "Incident management process", "description": "Define roles/procedures for rapid detection, diagnosis, recovery.", "sortOrder": 8 },
+        { "code": "OE:09", "slug": "testing", "title": "Quality/testing practices", "description": "Align testing approach with business objectives and quality bars.", "sortOrder": 9 },
+        { "code": "OE:10", "slug": "enable-automation", "title": "Automation", "description": "Automate repetitive, high-ROI tasks reliably and securely.", "sortOrder": 10 },
+        { "code": "OE:11", "slug": "safe-deployments", "title": "Safe deployment practices", "description": "Use small, gated, progressive releases with rollback plans.", "sortOrder": 11 }
+      ]
+    },
+    {
+      "code": "PE",
+      "name": "Performance Efficiency",
+      "sortOrder": 5,
+      "pillarPath": "performance-efficiency",
+      "checklistUrl": "https://learn.microsoft.com/en-us/azure/well-architected/performance-efficiency/checklist",
+      "controls": [
+        { "code": "PE:01", "slug": "performance-targets", "title": "Performance targets", "description": "Set numeric, requirement-driven performance targets per flow.", "sortOrder": 1 },
+        { "code": "PE:02", "slug": "capacity-planning", "title": "Capacity planning", "description": "Plan capacity ahead of predictable demand changes.", "sortOrder": 2 },
+        { "code": "PE:03", "slug": "select-services", "title": "Service selection", "description": "Choose services/tiers that can hit targets and absorb capacity changes.", "sortOrder": 3 },
+        { "code": "PE:04", "slug": "monitoring", "title": "Performance monitoring", "description": "Measure performance consistently over time against baselines.", "sortOrder": 4 },
+        { "code": "PE:05", "slug": "scale-partition", "title": "Scaling & partitioning", "description": "Design scale units and partitioning for controlled, reliable scaling.", "sortOrder": 5 },
+        { "code": "PE:06", "slug": "performance-test", "title": "Performance testing", "description": "Regularly test in production-like environments against targets.", "sortOrder": 6 },
+        { "code": "PE:07", "slug": "optimize-code-infrastructure", "title": "Code/infra optimization", "description": "Keep code/infra lean, performant, and platform-offloaded.", "sortOrder": 7 },
+        { "code": "PE:08", "slug": "optimize-data-performance", "title": "Data performance optimization", "description": "Tune stores, partitions, and indexes for actual access patterns.", "sortOrder": 8 },
+        { "code": "PE:09", "slug": "prioritize-critical-flows", "title": "Critical flow prioritization", "description": "Focus optimization effort on the highest-priority flows first.", "sortOrder": 9 },
+        { "code": "PE:10", "slug": "optimize-operational-tasks", "title": "Operational task impact", "description": "Minimize how routine ops (backups, scans, rotations) hurt performance.", "sortOrder": 10 },
+        { "code": "PE:11", "slug": "respond-live-performance-issues", "title": "Live incident response", "description": "Have clear ownership/communication for live performance problems.", "sortOrder": 11 },
+        { "code": "PE:12", "slug": "continuous-performance-optimize", "title": "Continuous optimization", "description": "Keep monitoring and tuning components that degrade over time.", "sortOrder": 12 }
+      ]
+    }
+  ],
+  "_notes": {
+    "guidanceUrlPattern": "https://learn.microsoft.com/en-us/azure/well-architected/{domain.pillarPath}/{control.slug}",
+    "keyForIdempotentSeed": "framework.code + control.code",
+    "totalControls": 59,
+    "sourceSpec": "specs/08-waf.md"
+  }
+}

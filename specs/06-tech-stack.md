@@ -49,6 +49,18 @@ in-house rather than pulling in a third-party dependency. Any exception to
 this rule requires explicit user approval before being added, and must be
 recorded here with justification.
 
+### Recorded exception: GitHub Models for issue-matching keyword extraction
+`11-issue-matching.md` calls **GitHub Models** (an external HTTPS service,
+not a Microsoft-published NuGet package) to extract keywords from Issue root
+causes. This is a deliberate, explicitly-approved exception scoped to that
+one feature's keyword-extraction step only — see
+`docs/adr/0001-llm-based-issue-matching.md` for rationale. It is called
+behind an `IKeywordExtractionService` interface with config-driven provider
+selection so the concrete provider can be swapped later. Everything else in
+the app remains local-only and Microsoft-package-only, including the
+keyword-to-`ControlKeyword` fuzzy matching step in that same feature, which
+is hand-rolled with no new package.
+
 ## Tracing and diagnostics (required)
 - Built-in tracing is mandatory for debuggability, using
   `System.Diagnostics.TraceSource` (source name: `BPRadar`) as the project
@@ -97,6 +109,8 @@ BPRadar/
         Import/              # CSV/XLSX import pipeline (04-import.md)
         Dashboard/           # dashboard + radar chart (05-dashboard.md)
         Reporting/           # CSV/PDF audit handoff exports
+        IssueMatching/       # issue/root cause capture + LLM keyword
+                             # extraction + control matching (11-issue-matching.md)
       wwwroot/
   tests/
     BPRadar.Tests/           # unit tests (scoring logic, import validation, etc.)
@@ -107,7 +121,9 @@ BPRadar/
 
 ## Non-functional requirements
 - Runs locally with `dotnet run` — no external services required beyond the
-  .NET SDK.
+  .NET SDK, **except** `11-issue-matching.md`'s keyword-extraction call to
+  GitHub Models (see recorded exception above); the rest of the app has no
+  external service dependency.
 - No authentication/authorization in MVP (see `00-overview.md` non-goals).
 - No telemetry/analytics collection.
 

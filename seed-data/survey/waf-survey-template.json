@@ -1,0 +1,41 @@
+{
+  "surveyTemplate": {
+    "name": "Azure WAF Transformation Pulse",
+    "frameworkCode": "AZURE_WAF",
+    "description": "Lightweight recurring pulse covering all 5 Azure Well-Architected pillars. Complements full WAF Assessments (04-import.md/03-manual-entry.md) with a quick quarterly check-in for transformation tracking (07-survey.md).",
+    "cadence": "Quarterly",
+    "isActive": true
+  },
+  "questions": [
+    { "code": "SVY-WAF-RE-01", "prompt": "Do you have explicit, documented availability/recovery targets (SLO/RTO/RPO) for your critical flows?", "domainCode": "RE", "controlCode": "RE:04", "weight": 1.0, "sortOrder": 1, "isRequired": true },
+    { "code": "SVY-WAF-RE-02", "prompt": "Are redundant components/instances in place for your most critical business flows?", "domainCode": "RE", "controlCode": "RE:05", "weight": 1.0, "sortOrder": 2, "isRequired": true },
+    { "code": "SVY-WAF-RE-03", "prompt": "Do you regularly run resiliency/chaos tests (failure and load injection) rather than relying on real incidents to find weaknesses?", "domainCode": "RE", "controlCode": "RE:08", "weight": 1.0, "sortOrder": 3, "isRequired": true },
+    { "code": "SVY-WAF-RE-04", "prompt": "Is there a tested, documented disaster recovery plan covering the whole system?", "domainCode": "RE", "controlCode": "RE:09", "weight": 1.0, "sortOrder": 4, "isRequired": true },
+
+    { "code": "SVY-WAF-SE-01", "prompt": "Is there a defined security baseline aligned to compliance/industry norms, with measurement against it?", "domainCode": "SE", "controlCode": "SE:01", "weight": 1.0, "sortOrder": 5, "isRequired": true },
+    { "code": "SVY-WAF-SE-02", "prompt": "Is identity/access management enforced with least-privilege and auditable controls across users and components?", "domainCode": "SE", "controlCode": "SE:05", "weight": 1.0, "sortOrder": 6, "isRequired": true },
+    { "code": "SVY-WAF-SE-03", "prompt": "Is data encrypted at rest and in transit using modern, platform-native methods aligned to data classification?", "domainCode": "SE", "controlCode": "SE:07", "weight": 1.0, "sortOrder": 7, "isRequired": true },
+    { "code": "SVY-WAF-SE-04", "prompt": "Are incident response procedures defined, owned, and rehearsed?", "domainCode": "SE", "controlCode": "SE:12", "weight": 1.0, "sortOrder": 8, "isRequired": true },
+
+    { "code": "SVY-WAF-CO-01", "prompt": "Is there a maintained cost model (initial/run-rate/ongoing) with a budget buffer?", "domainCode": "CO", "controlCode": "CO:02", "weight": 1.0, "sortOrder": 9, "isRequired": true },
+    { "code": "SVY-WAF-CO-02", "prompt": "Is daily cost data captured with trend/forecast visibility and automated anomaly alerts?", "domainCode": "CO", "controlCode": "CO:03", "weight": 1.0, "sortOrder": 10, "isRequired": true },
+    { "code": "SVY-WAF-CO-03", "prompt": "Are spending guardrails (policy/limits/gates) in place to prevent overspend?", "domainCode": "CO", "controlCode": "CO:04", "weight": 1.0, "sortOrder": 11, "isRequired": true },
+    { "code": "SVY-WAF-CO-04", "prompt": "Are unneeded or underused components/features regularly identified and right-sized or removed?", "domainCode": "CO", "controlCode": "CO:07", "weight": 1.0, "sortOrder": 12, "isRequired": false },
+
+    { "code": "SVY-WAF-OE-01", "prompt": "Is there a shared, blameless DevOps culture with continuous-improvement practices across teams?", "domainCode": "OE", "controlCode": "OE:01", "weight": 1.0, "sortOrder": 13, "isRequired": true },
+    { "code": "SVY-WAF-OE-02", "prompt": "Is infrastructure provisioned via Infrastructure as Code (preferring declarative approaches)?", "domainCode": "OE", "controlCode": "OE:05", "weight": 1.0, "sortOrder": 14, "isRequired": true },
+    { "code": "SVY-WAF-OE-03", "prompt": "Does your telemetry/observability design validate decisions and support continuous improvement?", "domainCode": "OE", "controlCode": "OE:07", "weight": 1.0, "sortOrder": 15, "isRequired": true },
+    { "code": "SVY-WAF-OE-04", "prompt": "Are releases deployed via small, gated, progressive rollouts with rollback plans?", "domainCode": "OE", "controlCode": "OE:11", "weight": 1.0, "sortOrder": 16, "isRequired": false },
+
+    { "code": "SVY-WAF-PE-01", "prompt": "Are numeric, requirement-driven performance targets set per critical flow?", "domainCode": "PE", "controlCode": "PE:01", "weight": 1.0, "sortOrder": 17, "isRequired": true },
+    { "code": "SVY-WAF-PE-02", "prompt": "Are Azure services/tiers chosen based on their ability to hit performance targets and absorb capacity changes?", "domainCode": "PE", "controlCode": "PE:03", "weight": 1.0, "sortOrder": 18, "isRequired": true },
+    { "code": "SVY-WAF-PE-03", "prompt": "Is performance testing regularly run in production-like environments against defined targets?", "domainCode": "PE", "controlCode": "PE:06", "weight": 1.0, "sortOrder": 19, "isRequired": true },
+    { "code": "SVY-WAF-PE-04", "prompt": "Is there clear ownership/communication for responding to live performance incidents?", "domainCode": "PE", "controlCode": "PE:11", "weight": 1.0, "sortOrder": 20, "isRequired": false }
+  ],
+  "_notes": {
+    "questionCount": 20,
+    "perPillarBreakdown": "4 questions per pillar (RE/SE/CO/OE/PE) for balanced coverage, within the 10-30 recommended range in 07-survey.md",
+    "responseModel": "Each SurveyResponse uses SurveyResponseLevel (VeryLow..VeryHigh, NotApplicable) per 02-data-model.md; optional numeric Score override.",
+    "domainCode/controlCode": "Resolved to DomainId/ControlId at seed time by joining against the azure-waf.json fixture (Framework must be seeded first)."
+  }
+}
