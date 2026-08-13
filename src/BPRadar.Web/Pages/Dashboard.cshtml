@@ -2,6 +2,9 @@
 @model BPRadar.Web.Pages.DashboardModel
 @using BPRadar.Web.Data
 @using BPRadar.Web.Features.Dashboard
+@using BPRadar.Web.Features.Surveys
+@using Microsoft.AspNetCore.Html
+@using System.Globalization
 @{
     ViewData["Title"] = "Dashboard";
     Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
@@ -67,6 +70,20 @@
                     }
                 </select>
             </label>
+            <label>
+                Survey Template
+                <select name="SurveyTemplateId">
+                    <option value="">No survey tracking</option>
+                    @foreach (var template in dashboard.SurveyTemplateOptions)
+                    {
+                        <option
+                            value="@template.Id"
+                            selected="@(template.Id == dashboard.SelectedSurveyTemplateId)">
+                            @template.Name (@template.Cadence)
+                        </option>
+                    }
+                </select>
+            </label>
             <button type="submit">Apply scope</button>
         </form>
 
@@ -118,6 +135,307 @@
             }
         </section>
 
+        <section aria-labelledby="radar-heading">
+            <h2 id="radar-heading">Cross-framework comparison</h2>
+            @if (dashboard.Radar.Axes.Length == 0)
+            {
+                <p>Select at least one assessment to display the radar chart.</p>
+            }
+            else
+            {
+                var radarColors = new[] { "#0969da", "#8250df", "#1a7f37", "#bf8700", "#cf222e" };
+                <div class="chart-container">
+                    <svg
+                        id="radar-chart"
+                        class="radar-chart"
+                        viewBox="0 0 600 500"
+                        role="img"
+                        aria-labelledby="radar-title radar-description">
+                        <title id="radar-title">Selected assessment framework scores</title>
+                        <desc id="radar-description">
+                            Framework axes range from zero to one hundred percent.
+                            Each selected assessment is a separate series.
+                        </desc>
+                        @foreach (var level in dashboard.Radar.GridLevels)
+                        {
+                            <polygon
+                                class="radar-grid"
+                                data-grid-level="@level.ToString("0", CultureInfo.InvariantCulture)"
+                                points="@RadarGridPoints(dashboard.Radar.Axes.Length, level)" />
+                            @SvgText(
+                                "radar-grid-label",
+                                "304",
+                                RadarGridLabelY(level),
+                                $"{level.ToString("0", CultureInfo.InvariantCulture)}%")
+                        }
+                        @for (var index = 0; index < dashboard.Radar.Axes.Length; index++)
+                        {
+                            var axis = dashboard.Radar.Axes[index];
+                            <line
+                                class="radar-axis"
+                                x1="300"
+                                y1="220"
+                                x2="@RadarCoordinate(index, dashboard.Radar.Axes.Length, 160, xCoordinate: true)"
+                                y2="@RadarCoordinate(index, dashboard.Radar.Axes.Length, 160, xCoordinate: false)" />
+                            @SvgText(
+                                "radar-axis-label",
+                                RadarCoordinate(
+                                    index,
+                                    dashboard.Radar.Axes.Length,
+                                    190,
+                                    xCoordinate: true),
+                                RadarCoordinate(
+                                    index,
+                                    dashboard.Radar.Axes.Length,
+                                    190,
+                                    xCoordinate: false),
+                                axis.Label,
+                                RadarTextAnchor(index, dashboard.Radar.Axes.Length))
+                        }
+                        @for (var index = 0; index < dashboard.Radar.Series.Length; index++)
+                        {
+                            var series = dashboard.Radar.Series[index];
+                            var color = radarColors[index % radarColors.Length];
+                            <polygon
+                                class="radar-series"
+                                data-radar-series-assessment-id="@series.AssessmentId"
+                                points="@RadarSeriesPoints(series.Values)"
+                                style="--series-color: @color" />
+                        }
+                        @if (dashboard.Radar.TargetSeries is not null)
+                        {
+                            var targetValues = dashboard.Radar.TargetSeries.Values;
+                            @if (targetValues.All(value => value is not null))
+                            {
+                                <polygon
+                                    class="radar-series target"
+                                    points="@RadarSeriesPoints(targetValues)" />
+                            }
+                            else
+                            {
+                                @for (var index = 0; index < targetValues.Length; index++)
+                                {
+                                    var targetValue = targetValues[index];
+                                    if (targetValue is null)
+                                    {
+                                        continue;
+                                    }
+
+                                    <circle
+                                        class="radar-target-point"
+                                        data-target-framework-id="@dashboard.Radar.Axes[index].FrameworkId"
+                                        cx="@RadarValueCoordinate(
+                                            index,
+                                            targetValues.Length,
+                                            targetValue.Value,
+                                            xCoordinate: true)"
+                                        cy="@RadarValueCoordinate(
+                                            index,
+                                            targetValues.Length,
+                                            targetValue.Value,
+                                            xCoordinate: false)"
+                                        r="6">
+                                        <title>
+                                            @dashboard.Radar.Axes[index].Label target:
+                                            @targetValue.Value.ToString("0.#")%
+                                        </title>
+                                    </circle>
+                                }
+                            }
+                        }
+                    </svg>
+                    <ul class="chart-legend" aria-label="Radar chart legend">
+                        @for (var index = 0; index < dashboard.Radar.Series.Length; index++)
+                        {
+                            var series = dashboard.Radar.Series[index];
+                            var color = radarColors[index % radarColors.Length];
+                            <li>
+                                <span class="legend-swatch" style="--series-color: @color"></span>
+                                <span>@series.Label</span>
+                            </li>
+                        }
+                        @if (dashboard.Radar.TargetSeries is not null)
+                        {
+                            <li>
+                                <span class="legend-swatch target"></span>
+                                <span>Target</span>
+                            </li>
+                        }
+                    </ul>
+                    @if (dashboard.Radar.TargetSeries?.Values.Any(value => value is null) == true)
+                    {
+                        <p class="chart-note">
+                            Target markers appear only on frameworks with a configured target.
+                        </p>
+                    }
+                </div>
+            }
+        </section>
+
+        <section aria-labelledby="survey-tracking-heading">
+            <h2 id="survey-tracking-heading">Company profile survey tracking</h2>
+            @if (dashboard.SelectedSurveyTemplateId is null)
+            {
+                <p>Select a Survey Template in the scope above to view recurring profile progress.</p>
+            }
+            else
+            {
+                var tracking = dashboard.SurveyTracking!;
+                <h3>@tracking.SurveyTemplateName</h3>
+                <div class="survey-summary">
+                    <article>
+                        <h4>Latest profile</h4>
+                        <strong>
+                            @(tracking.LatestScore is null
+                                ? "No scored submissions"
+                                : $"{tracking.LatestScore.Value:0.#}% profile score")
+                        </strong>
+                    </article>
+                    <article>
+                        <h4>Change</h4>
+                        <strong>
+                            @(tracking.LatestDelta is null
+                                ? "No previous score"
+                                : $"{tracking.LatestDelta.Value:+0.#;-0.#;0} points vs previous")
+                        </strong>
+                    </article>
+                    <article>
+                        <h4>Cadence</h4>
+                        <strong>
+                            @(tracking.CadenceStatus == SurveyDueStatus.Overdue ? "Overdue" : "On time")
+                        </strong>
+                        @if (tracking.NextDueDate is not null)
+                        {
+                            <span>
+                                Next due @tracking.NextDueDate.Value.ToString("yyyy-MM-dd")
+                            </span>
+                        }
+                    </article>
+                </div>
+
+                @if (tracking.History.Length == 0)
+                {
+                    <p>No submissions are available for this Organization and Survey Template.</p>
+                }
+                else
+                {
+                    <div class="survey-trend-layout">
+                        <div class="chart-container">
+                            <h3>Profile score trend</h3>
+                            <svg
+                                id="survey-trend"
+                                class="trend-chart"
+                                viewBox="0 0 600 240"
+                                role="img"
+                                aria-labelledby="trend-title trend-description">
+                                <title id="trend-title">Survey profile score trend</title>
+                                <desc id="trend-description">
+                                    Profile scores by survey snapshot date, from zero to one hundred percent.
+                                </desc>
+                                @foreach (var level in new[] { 0, 25, 50, 75, 100 })
+                                {
+                                    <line
+                                        class="trend-grid"
+                                        x1="60"
+                                        y1="@TrendY(level)"
+                                        x2="560"
+                                        y2="@TrendY(level)" />
+                                    @SvgText(
+                                        "trend-label",
+                                        "52",
+                                        (TrendY(level) + 4).ToString(
+                                            "0.##",
+                                            CultureInfo.InvariantCulture),
+                                        $"{level}%",
+                                        "end")
+                                }
+                                @if (tracking.Trend.Length > 1)
+                                {
+                                    <polyline
+                                        class="trend-line"
+                                        points="@TrendPoints(tracking.Trend)" />
+                                }
+                                @for (var index = 0; index < tracking.Trend.Length; index++)
+                                {
+                                    var point = tracking.Trend[index];
+                                    <circle
+                                        class="trend-point"
+                                        data-score="@point.Score.ToString("0.##", CultureInfo.InvariantCulture)"
+                                        cx="@TrendX(index, tracking.Trend.Length)"
+                                        cy="@TrendY(point.Score)"
+                                        r="5">
+                                        <title>
+                                            @point.SnapshotDate.ToString("yyyy-MM-dd"):
+                                            @point.Score.ToString("0.#")%
+                                        </title>
+                                    </circle>
+                                }
+                            </svg>
+                        </div>
+
+                        <div class="table-scroll">
+                            <h3>Submission history</h3>
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Snapshot date</th>
+                                        <th>Submission</th>
+                                        <th>Profile score</th>
+                                        <th>Delta</th>
+                                        <th>Key notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var submission in tracking.History)
+                                    {
+                                        <tr>
+                                            <td>@submission.SnapshotDate.ToString("yyyy-MM-dd")</td>
+                                            <td>@submission.Label</td>
+                                            <td>@(submission.Score?.ToString("0.#") ?? "—")</td>
+                                            <td>
+                                                @(submission.Delta is null
+                                                    ? "—"
+                                                    : submission.Delta.Value.ToString("+0.#;-0.#;0"))
+                                            </td>
+                                            <td>@submission.Notes</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+
+                @if (tracking.DomainDeltas.Length > 0)
+                {
+                    <div class="table-scroll">
+                        <h3>Domain changes</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Domain</th>
+                                    <th>Previous</th>
+                                    <th>Latest</th>
+                                    <th>Delta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var domain in tracking.DomainDeltas)
+                                {
+                                    <tr>
+                                        <td>@domain.DomainCode — @domain.DomainName</td>
+                                        <td>@domain.PreviousScore.ToString("0.#")</td>
+                                        <td>@domain.LatestScore.ToString("0.#")</td>
+                                        <td>@domain.Delta.ToString("+0.#;-0.#;0")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            }
+        </section>
+
         <section aria-labelledby="gaps-heading">
             <h2 id="gaps-heading">Gap drill-down</h2>
             <form method="get" class="gap-filters">
@@ -130,6 +448,10 @@
                     type="hidden"
                     name="BaselineProfileId"
                     value="@dashboard.SelectedBaselineProfileId" />
+                <input
+                    type="hidden"
+                    name="SurveyTemplateId"
+                    value="@dashboard.SelectedSurveyTemplateId" />
 
                 <label>
                     Framework
@@ -259,3 +581,94 @@
         });
     });
 </script>
+
+@functions {
+    private const double RadarCenterX = 300;
+    private const double RadarCenterY = 220;
+    private const double RadarRadius = 160;
+
+    private static string RadarGridPoints(int axisCount, decimal level) =>
+        RadarSeriesPoints(
+            Enumerable.Repeat<decimal?>(level, axisCount).ToArray());
+
+    private static string RadarSeriesPoints(IReadOnlyList<decimal?> values) =>
+        string.Join(
+            " ",
+            values.Select((value, index) =>
+                RadarPoint(
+                    index,
+                    values.Count,
+                    RadarRadius * (double)value!.Value / 100d)));
+
+    private static string RadarValueCoordinate(
+        int index,
+        int count,
+        decimal value,
+        bool xCoordinate)
+    {
+        var point = RadarPoint(
+            index,
+            count,
+            RadarRadius * (double)value / 100d).Split(',');
+        return xCoordinate ? point[0] : point[1];
+    }
+
+    private static string RadarPoint(int index, int count, double radius)
+    {
+        var angle = -Math.PI / 2d + 2d * Math.PI * index / Math.Max(count, 1);
+        return string.Create(
+            CultureInfo.InvariantCulture,
+            $"{RadarCenterX + Math.Cos(angle) * radius:0.##}," +
+            $"{RadarCenterY + Math.Sin(angle) * radius:0.##}");
+    }
+
+    private static string RadarCoordinate(
+        int index,
+        int count,
+        double radius,
+        bool xCoordinate)
+    {
+        var point = RadarPoint(index, count, radius).Split(',');
+        return xCoordinate ? point[0] : point[1];
+    }
+
+    private static string RadarTextAnchor(int index, int count)
+    {
+        var x = double.Parse(
+            RadarCoordinate(index, count, 190, xCoordinate: true),
+            CultureInfo.InvariantCulture);
+        return x < RadarCenterX - 5 ? "end" : x > RadarCenterX + 5 ? "start" : "middle";
+    }
+
+    private static string RadarGridLabelY(decimal level) =>
+        (RadarCenterY - RadarRadius * (double)level / 100d)
+        .ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static string TrendPoints(IReadOnlyList<SurveyTrendPoint> points) =>
+        string.Join(
+            " ",
+            points.Select((point, index) =>
+                $"{TrendX(index, points.Count)},{TrendY(point.Score)}"));
+
+    private static string TrendX(int index, int count) =>
+        (count <= 1 ? 310d : 60d + 500d * index / (count - 1d))
+        .ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static double TrendY(decimal score) =>
+        20d + (100d - (double)score) * 1.8d;
+
+    private static IHtmlContent SvgText(
+        string cssClass,
+        string x,
+        string y,
+        string value,
+        string? textAnchor = null)
+    {
+        var anchor = textAnchor is null
+            ? string.Empty
+            : $" text-anchor=\"{textAnchor}\"";
+        return new HtmlString(
+            $"<text class=\"{cssClass}\" x=\"{x}\" y=\"{y}\"{anchor}>" +
+            $"{System.Net.WebUtility.HtmlEncode(value)}</text>");
+    }
+}

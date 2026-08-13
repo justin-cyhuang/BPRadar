@@ -47,21 +47,81 @@ public static class SurveyCadenceService
                 var hasSubmission = latestSnapshots.TryGetValue(
                     template.TemplateId,
                     out var latestSnapshot);
-                var nextDueDate = hasSubmission
-                    ? AddCadence(latestSnapshot, template.Cadence)
-                    : (DateTime?)null;
-                return new DueSurveyTemplate(
+                return CreateStatus(
                     template.TemplateId,
                     template.Name,
                     template.Description,
                     template.Cadence,
                     template.QuestionCount,
                     hasSubmission ? latestSnapshot : null,
-                    nextDueDate,
-                    GetStatus(today, nextDueDate));
+                    today);
             })
             .Where(template => template.Status != SurveyDueStatus.OnTime)
             .ToArray();
+    }
+
+    public static async Task<DueSurveyTemplate?> GetStatusAsync(
+        BPRadarDbContext dbContext,
+        int organizationId,
+        int templateId,
+        DateTime currentDate,
+        CancellationToken cancellationToken = default)
+    {
+        var template = await dbContext.SurveyTemplates
+            .AsNoTracking()
+            .Where(item => item.Id == templateId && item.IsActive)
+            .Select(item => new
+            {
+                TemplateId = item.Id,
+                item.Name,
+                item.Description,
+                item.Cadence,
+                QuestionCount = item.Questions.Count
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (template is null)
+        {
+            return null;
+        }
+
+        var latestSnapshot = await dbContext.SurveySubmissions
+            .AsNoTracking()
+            .Where(submission =>
+                submission.OrganizationId == organizationId &&
+                submission.SurveyTemplateId == templateId)
+            .Select(submission => (DateTime?)submission.SnapshotDate)
+            .MaxAsync(cancellationToken);
+        return CreateStatus(
+            template.TemplateId,
+            template.Name,
+            template.Description,
+            template.Cadence,
+            template.QuestionCount,
+            latestSnapshot,
+            currentDate.Date);
+    }
+
+    private static DueSurveyTemplate CreateStatus(
+        int templateId,
+        string name,
+        string? description,
+        SurveyCadence cadence,
+        int questionCount,
+        DateTime? latestSnapshot,
+        DateTime today)
+    {
+        var nextDueDate = latestSnapshot is null
+            ? (DateTime?)null
+            : AddCadence(latestSnapshot.Value, cadence);
+        return new DueSurveyTemplate(
+            templateId,
+            name,
+            description,
+            cadence,
+            questionCount,
+            latestSnapshot,
+            nextDueDate,
+            GetStatus(today, nextDueDate));
     }
 
     private static SurveyDueStatus GetStatus(
