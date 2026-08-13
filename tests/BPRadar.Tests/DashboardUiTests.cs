@@ -554,10 +554,15 @@ public sealed class DashboardReportingEndpointTests
         StringAssert.Contains(output, "operation=CsvExportCompleted");
         StringAssert.Contains(output, "operation=PrintReportCompleted");
         StringAssert.Contains(output, $"OrganizationId={setup.OrganizationId}");
+        StringAssert.Contains(output, "OrganizationName=\"Contoso\"");
         StringAssert.Contains(output, $"AssessmentIds={setup.AssessmentId}");
         StringAssert.Contains(output, $"FrameworkIds={setup.TargetedFrameworkId}");
+        StringAssert.Contains(output, "Frameworks=\"Test Framework 1.0\"");
         StringAssert.Contains(output, $"DomainId={setup.DomainId}");
         StringAssert.Contains(output, $"SurveyTemplateId={setup.SurveyTemplateId}");
+        StringAssert.Contains(
+            output,
+            "SurveyTemplateName=\"Transformation pulse\"");
         Assert.IsFalse(
             output.Contains("secret diagnostic notes", StringComparison.Ordinal));
     }

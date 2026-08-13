@@ -67,7 +67,7 @@ public sealed class DashboardReportModel(
             TraceEventType.Stop,
             "Reporting",
             "PrintReportCompleted",
-            $"{TraceScope(Dashboard)} " +
+            $"{TraceScope(Dashboard, OrganizationName)} " +
             $"assessments={Dashboard.SelectedAssessmentIds.Length} " +
             $"gaps={Dashboard.Gaps.Length} printedGaps={PrintedGaps.Length}",
             timer.ElapsedMilliseconds);

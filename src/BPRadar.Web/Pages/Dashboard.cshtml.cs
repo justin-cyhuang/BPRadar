@@ -61,7 +61,7 @@ public sealed class DashboardModel(
             TraceEventType.Stop,
             "Reporting",
             "CsvExportCompleted",
-            $"{TraceScope(Dashboard)} " +
+            $"{TraceScope(Dashboard, organizationName)} " +
             $"assessments={Dashboard.SelectedAssessmentIds.Length} " +
             $"gaps={Dashboard.Gaps.Length} bytes={content.Length}",
             timer.ElapsedMilliseconds);

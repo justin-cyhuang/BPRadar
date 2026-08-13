@@ -94,21 +94,34 @@ public abstract class DashboardExportScopePageModel : PageModel
         return result;
     }
 
-    protected string TraceScope(DashboardView dashboard)
+    protected string TraceScope(
+        DashboardView dashboard,
+        string organizationName)
     {
-        var frameworkIds = dashboard.AssessmentOptions
+        var selectedFrameworks = dashboard.AssessmentOptions
             .Where(option => dashboard.SelectedAssessmentIds.Contains(option.Id))
-            .Select(option => option.FrameworkId)
+            .Select(option => new
+            {
+                option.FrameworkId,
+                DisplayName = $"{option.FrameworkName} {option.FrameworkVersion}"
+            })
             .Distinct()
-            .Order()
+            .OrderBy(option => option.FrameworkId)
             .ToArray();
+        var surveyTemplateName = dashboard.SurveyTemplateOptions
+            .SingleOrDefault(option =>
+                option.Id == dashboard.SelectedSurveyTemplateId)
+            ?.Name;
         return
             $"OrganizationId={Id(OrganizationId)} " +
+            $"OrganizationName={Quoted(organizationName)} " +
             $"AssessmentIds={Ids(dashboard.SelectedAssessmentIds)} " +
             $"BaselineProfileId={Id(dashboard.SelectedBaselineProfileId)} " +
-            $"FrameworkIds={Ids(frameworkIds)} " +
+            $"FrameworkIds={Ids(selectedFrameworks.Select(option => option.FrameworkId))} " +
+            $"Frameworks={Quoted(string.Join(',', selectedFrameworks.Select(option => option.DisplayName)))} " +
             $"DomainId={Id(DomainId)} " +
-            $"SurveyTemplateId={Id(dashboard.SelectedSurveyTemplateId)}";
+            $"SurveyTemplateId={Id(dashboard.SelectedSurveyTemplateId)} " +
+            $"SurveyTemplateName={Quoted(surveyTemplateName)}";
     }
 
     private static string Id(int? value) =>
@@ -119,4 +132,19 @@ public abstract class DashboardExportScopePageModel : PageModel
             ',',
             values.Select(value =>
                 value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+
+    private static string Quoted(string? value)
+    {
+        if (value is null)
+        {
+            return "none";
+        }
+
+        var safeValue = value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace('\r', '_')
+            .Replace('\n', '_');
+        return $"\"{safeValue}\"";
+    }
 }
