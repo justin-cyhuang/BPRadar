@@ -23,6 +23,11 @@ public static class DashboardCsvExporter
                 .Where(option => dashboard.SelectedAssessmentIds.Contains(option.Id))
                 .Select(option =>
                     $"{option.FrameworkName} {option.FrameworkVersion} - {option.Label}")));
+        AddRow(
+            csv,
+            "Survey Template",
+            dashboard.SurveyTracking?.SurveyTemplateName ?? "Not selected");
+        AddRow(csv, "Survey Evidence State", SurveyEvidenceState(dashboard));
         AddRow(csv, "Exported UTC", exportedAtUtc.ToString("O", CultureInfo.InvariantCulture));
         AddRow(csv, "Correlation ID", correlationId);
 
@@ -148,4 +153,22 @@ public static class DashboardCsvExporter
 
     private static string Number(decimal? value) =>
         value?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static string SurveyEvidenceState(DashboardView dashboard)
+    {
+        var tracking = dashboard.SurveyTracking;
+        if (tracking is null)
+        {
+            return "No Survey Template selected";
+        }
+
+        if (tracking.History.Length == 0)
+        {
+            return "Selected Survey Template has no submissions";
+        }
+
+        return tracking.Trend.Length == 0
+            ? "Selected Survey Template has submissions but no scored history"
+            : "Scored submission history available";
+    }
 }
