@@ -23,6 +23,7 @@ public static class IssueMatchingServiceCollectionExtensions
 
         services.AddSingleton(options);
         services.AddSingleton(options.GitHubModels);
+        services.AddSingleton(options.OpenAICompatible);
         services.AddSingleton<IControlKeywordCatalog>(
             new JsonControlKeywordCatalog(seedPath));
         services.AddTransient<IIssueMatchingService, IssueMatchingService>();
@@ -40,6 +41,18 @@ public static class IssueMatchingServiceCollectionExtensions
                 services.AddTransient<IKeywordExtractionService>(
                     provider => provider.GetRequiredService<
                         GitHubModelsKeywordExtractionService>());
+                break;
+            case "OpenAICompatible":
+                services
+                    .AddHttpClient<OpenAICompatibleKeywordExtractionService>(
+                        client =>
+                        {
+                            client.Timeout = TimeSpan.FromSeconds(
+                                options.OpenAICompatible.TimeoutSeconds);
+                        });
+                services.AddTransient<IKeywordExtractionService>(
+                    provider => provider.GetRequiredService<
+                        OpenAICompatibleKeywordExtractionService>());
                 break;
             default:
                 throw new InvalidOperationException(

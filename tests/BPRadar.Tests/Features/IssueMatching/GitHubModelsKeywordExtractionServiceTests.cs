@@ -1,6 +1,4 @@
-using System.Net;
 using System.Net.Http.Headers;
-using System.Text;
 using BPRadar.Web.Features.IssueMatching;
 
 namespace BPRadar.Tests.Features.IssueMatching;
@@ -71,30 +69,4 @@ public sealed class GitHubModelsKeywordExtractionServiceTests
             () => service.ExtractKeywordsAsync("Backups did not run."));
     }
 
-    private sealed class RecordingHttpMessageHandler(string responseBody)
-        : HttpMessageHandler
-    {
-        public Uri? RequestUri { get; private set; }
-
-        public AuthenticationHeaderValue? Authorization { get; private set; }
-
-        public string RequestBody { get; private set; } = string.Empty;
-
-        protected override async Task<HttpResponseMessage> SendAsync(
-            HttpRequestMessage request,
-            CancellationToken cancellationToken)
-        {
-            RequestUri = request.RequestUri;
-            Authorization = request.Headers.Authorization;
-            RequestBody = await request.Content!.ReadAsStringAsync(cancellationToken);
-
-            return new HttpResponseMessage(HttpStatusCode.OK)
-            {
-                Content = new StringContent(
-                    responseBody,
-                    Encoding.UTF8,
-                    "application/json")
-            };
-        }
-    }
 }

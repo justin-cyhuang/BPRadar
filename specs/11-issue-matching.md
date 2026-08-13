@@ -130,19 +130,26 @@ Matching is **manually triggered**, not automatic/background. Flow:
 ## LLM provider abstraction
 - `IKeywordExtractionService` — single method,
   `Task<IReadOnlyList<string>> ExtractKeywordsAsync(string rootCauseText)`.
-- Default implementation: `GitHubModelsKeywordExtractionService`, calling
-  GitHub Models over HTTPS.
+- Default implementation: `OpenAICompatibleKeywordExtractionService`, calling a
+  configured OpenAI-compatible `chat/completions` endpoint over HTTP or HTTPS.
+- `GitHubModelsKeywordExtractionService` remains for reference and tests only;
+  GitHub Models was retired on July 30, 2026.
 - Provider selection is config-driven: `appsettings.json` →
-  `IssueMatching:LlmProvider` (e.g. `"GitHubModels"`), read at startup by a
+  `IssueMatching:LlmProvider` (for example, `"OpenAICompatible"`), read at
+  startup by a
   factory/DI registration that resolves the concrete implementation. Adding
   a new provider means adding a new implementation class + a case in the
-  factory — no changes to calling code (`08-issue-matching` feature code
+  factory — no changes to calling code (`11-issue-matching` feature code
   only ever depends on the interface).
-- Relevant config keys (exact shape finalized at implementation time):
+- Relevant config keys:
   - `IssueMatching:LlmProvider` — provider selector
-  - `IssueMatching:GitHubModels:Model` — model name
-  - `IssueMatching:GitHubModels:Token` — auth token (from environment/user
-    secrets, never committed)
+  - `IssueMatching:OpenAICompatible:Endpoint` — full chat completions URL
+  - `IssueMatching:OpenAICompatible:Model` — model or deployment name
+  - `IssueMatching:OpenAICompatible:ApiKey` — optional key from environment or
+    user secrets, never committed
+  - `IssueMatching:OpenAICompatible:ApiKeyHeaderName` and `AuthScheme` —
+    authentication overrides for services such as Azure OpenAI
+  - `IssueMatching:OpenAICompatible:TimeoutSeconds` — HTTP request timeout
   - `IssueMatching:MatchThreshold` — minimum similarity score to create a
     `ViolationMatch`
 
