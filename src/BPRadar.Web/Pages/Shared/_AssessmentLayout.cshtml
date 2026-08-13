@@ -20,6 +20,7 @@
         .domain > summary { align-items: center; cursor: pointer; display: flex; font-size: 1.1rem; justify-content: space-between; padding: 1rem; }
         .control-list { border-top: 1px solid #d0d7de; }
         .control-row { padding: 1rem; }
+        .control-row:target { background: #fff8c5; outline: 2px solid #bf8700; outline-offset: -2px; }
         .control-row + .control-row { border-top: 1px solid #d8dee4; }
         .control-row header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
         .control-row h2 { display: inline; font-size: 1rem; margin: 0 0 0 .5rem; }
@@ -30,9 +31,31 @@
         .save-state { color: #1a7f37; font-size: .9rem; }
         .row-error { color: #cf222e; min-height: 1.25rem; }
         .save-row { font-size: .9rem; padding: .45rem .75rem; }
+        .app-nav { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+        .app-nav a[aria-current="page"] { font-weight: 700; }
+        .scope-selector, .gap-filters { display: grid; gap: 1rem; }
+        .checkbox-label { align-items: center; display: flex; gap: .5rem; }
+        .checkbox-label input { width: auto; }
+        .overview-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+        .overview-card { border: 1px solid #d0d7de; border-radius: .5rem; padding: 1rem; }
+        .overview-card h3 { margin-top: 0; }
+        .overview-card dl { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .overview-card dl div { background: #f6f8fa; border-radius: .375rem; padding: .75rem; }
+        .overview-card dt { color: #57606a; font-size: .85rem; }
+        .overview-card dd { font-size: 1.1rem; font-weight: 700; margin: .2rem 0 0; }
+        .timestamp { color: #57606a; font-size: .85rem; }
+        .gap-filters { align-items: end; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); }
+        .table-scroll { overflow-x: auto; }
+        .gap-row { cursor: pointer; }
+        .gap-row:focus { outline: 2px solid #0969da; outline-offset: -2px; }
+        .gap-row:hover { background: #f6f8fa; }
     </style>
 </head>
 <body>
+    <nav class="app-nav" aria-label="Primary">
+        <a href="/Dashboard">Dashboard</a>
+        <a href="/Assessments">Assessments</a>
+    </nav>
     @RenderBody()
 </body>
 </html>

@@ -26,7 +26,12 @@
             <div class="control-list">
                 @foreach (var control in domain.Controls)
                 {
-                    <article class="control-row" data-control-id="@control.Id" data-domain-id="@domain.Id">
+                    <article
+                        id="control-@control.Id"
+                        class="control-row"
+                        data-control-id="@control.Id"
+                        data-domain-id="@domain.Id"
+                        tabindex="-1">
                         <header>
                             <div>
                                 <span class="control-code">@control.Code</span>
@@ -98,6 +103,24 @@
 <script>
     (() => {
         const assessmentId = @Model.Checklist.AssessmentId;
+
+        function focusLinkedControl() {
+            if (!window.location.hash.startsWith("#control-")) {
+                return;
+            }
+
+            const row = document.getElementById(window.location.hash.slice(1));
+            if (!row) {
+                return;
+            }
+
+            const domain = row.closest("details.domain");
+            if (domain) {
+                domain.open = true;
+            }
+            row.focus({ preventScroll: true });
+            row.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
 
         function errorMessage(problem) {
             if (!problem || !problem.errors) {
@@ -175,5 +198,6 @@
             });
             row.querySelector(".save-row").addEventListener("click", () => saveRow(row));
         });
+        focusLinkedControl();
     })();
 </script>
