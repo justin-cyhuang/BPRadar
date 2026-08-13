@@ -11,6 +11,7 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<BPRadarDbContext>(
     options => options.UseSqlite(connectionString));
 builder.Services.AddRazorPages();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddIssueMatching(
     builder.Configuration,
     builder.Environment.ContentRootPath);
