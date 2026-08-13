@@ -1,0 +1,218 @@
+@page "/Admin/Issues"
+@model BPRadar.Web.Pages.Admin.IssuesModel
+@{
+    ViewData["Title"] = "Issues";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - BPRadar</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; max-width: 75rem; }
+        form, article { border: 1px solid #ccc; margin: 1rem 0; padding: 1rem; }
+        label { display: block; font-weight: 600; margin-top: .75rem; }
+        input, select, textarea { box-sizing: border-box; max-width: 50rem; padding: .5rem; width: 100%; }
+        button { margin: .75rem .5rem 0 0; padding: .5rem .75rem; }
+        .match { border-left: .25rem solid #777; margin-top: 1rem; padding-left: 1rem; }
+        .discrepancy { border-left-color: #b42318; }
+        .error { color: #b42318; }
+        .muted { color: #555; }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Issue entry and violation matching</h1>
+        <p>Record externally root-caused Issues, run matching manually, and review candidate Control violations.</p>
+
+        <label for="organization">Organization</label>
+        <select id="organization">
+            <option value="">Select an organization</option>
+            @foreach (var organization in Model.Organizations)
+            {
+                <option value="@organization.Id">@organization.Name</option>
+            }
+        </select>
+
+        <form id="create-issue">
+            <h2>Record Issue</h2>
+            <label for="title">Title</label>
+            <input id="title" required maxlength="200" />
+            <label for="description">Description</label>
+            <textarea id="description" required rows="3"></textarea>
+            <label for="root-cause">Root Cause</label>
+            <textarea id="root-cause" rows="3" aria-describedby="root-cause-help"></textarea>
+            <p id="root-cause-help" class="muted">May be added later, but is required before matching.</p>
+            <button type="submit">Save Issue</button>
+        </form>
+
+        <p id="message" role="status"></p>
+        <section id="issues" aria-live="polite"></section>
+    </main>
+
+    <script>
+        const organization = document.getElementById("organization");
+        const issuesContainer = document.getElementById("issues");
+        const message = document.getElementById("message");
+        const queryOrganizationId = new URLSearchParams(location.search).get("organizationId");
+        if (queryOrganizationId) {
+            organization.value = queryOrganizationId;
+        }
+
+        organization.addEventListener("change", loadIssues);
+        document.getElementById("create-issue").addEventListener("submit", async event => {
+            event.preventDefault();
+            if (!organization.value) {
+                showMessage("Select an organization.", true);
+                return;
+            }
+
+            const response = await fetch(`/api/organizations/${organization.value}/issues`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    title: document.getElementById("title").value,
+                    description: document.getElementById("description").value,
+                    rootCause: document.getElementById("root-cause").value
+                })
+            });
+            if (await handleError(response)) return;
+            event.target.reset();
+            showMessage("Issue saved.");
+            await loadIssues();
+        });
+
+        async function loadIssues() {
+            issuesContainer.replaceChildren();
+            if (!organization.value) return;
+            const response = await fetch(`/api/organizations/${organization.value}/issues`);
+            if (await handleError(response)) return;
+            const issues = await response.json();
+            issues.forEach(issue => issuesContainer.append(renderIssue(issue)));
+        }
+
+        function renderIssue(issue) {
+            const article = document.createElement("article");
+            const heading = document.createElement("h2");
+            heading.textContent = issue.title;
+            article.append(heading);
+
+            const status = document.createElement("p");
+            status.textContent = `Matching status: ${issue.matchingStatus}`;
+            article.append(status);
+            if (issue.matchingError) {
+                const error = document.createElement("p");
+                error.className = "error";
+                error.textContent = issue.matchingError;
+                article.append(error);
+            }
+
+            const title = editableField("Title", issue.title, "input");
+            const description = editableField("Description", issue.description, "textarea");
+            const rootCause = editableField("Root Cause", issue.rootCause, "textarea");
+            article.append(title.wrapper, description.wrapper, rootCause.wrapper);
+
+            const save = actionButton("Save Issue", async () => {
+                const response = await fetch(`/api/issues/${issue.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: title.control.value,
+                        description: description.control.value,
+                        rootCause: rootCause.control.value
+                    })
+                });
+                if (await handleError(response)) return;
+                showMessage("Issue updated.");
+                await loadIssues();
+            });
+            const run = actionButton("Run matching", async () => {
+                const response = await fetch(`/api/issues/${issue.id}/matching`, {
+                    method: "POST"
+                });
+                if (await handleError(response)) return;
+                showMessage("Matching completed.");
+                await loadIssues();
+            });
+            article.append(save, run);
+
+            issue.violationMatches.forEach(match => article.append(renderMatch(match)));
+            return article;
+        }
+
+        function renderMatch(match) {
+            const section = document.createElement("section");
+            section.className = match.isSelfAssessmentDiscrepancy
+                ? "match discrepancy"
+                : "match";
+            const heading = document.createElement("h3");
+            heading.textContent = `${match.controlCode}: ${match.controlTitle}`;
+            section.append(heading);
+            appendText(section, match.controlDescription);
+            appendText(section, `Score: ${match.matchScore}; Review: ${match.reviewStatus}`);
+            appendText(section, match.discrepancyStatus === "NoSurveyResponse"
+                ? "No Survey response is available for this Control."
+                : `Self-Reported State: ${match.selfReportedState}; ${match.discrepancyStatus}`);
+            appendText(section, `Matched keywords: ${match.matchedKeywords.join(", ")}`);
+            section.append(
+                actionButton("Confirm", () => reviewMatch(match.id, "Confirmed")),
+                actionButton("Dismiss", () => reviewMatch(match.id, "Dismissed")));
+            return section;
+        }
+
+        async function reviewMatch(matchId, reviewStatus) {
+            const response = await fetch(`/api/violation-matches/${matchId}/review`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reviewStatus })
+            });
+            if (await handleError(response)) return;
+            showMessage(`Violation Match ${reviewStatus.toLowerCase()}.`);
+            await loadIssues();
+        }
+
+        function editableField(labelText, value, elementName) {
+            const wrapper = document.createElement("label");
+            wrapper.textContent = labelText;
+            const control = document.createElement(elementName);
+            control.value = value ?? "";
+            if (elementName === "textarea") control.rows = 3;
+            wrapper.append(control);
+            return { wrapper, control };
+        }
+
+        function actionButton(text, action) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.textContent = text;
+            button.addEventListener("click", action);
+            return button;
+        }
+
+        function appendText(parent, text) {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = text;
+            parent.append(paragraph);
+        }
+
+        async function handleError(response) {
+            if (response.ok) return false;
+            const problem = await response.json();
+            const validation = problem.errors
+                ? Object.values(problem.errors).flat().join(" ")
+                : null;
+            showMessage(validation || problem.detail || problem.title || "Request failed.", true);
+            return true;
+        }
+
+        function showMessage(text, isError = false) {
+            message.textContent = text;
+            message.className = isError ? "error" : "";
+        }
+
+        loadIssues();
+    </script>
+</body>
+</html>

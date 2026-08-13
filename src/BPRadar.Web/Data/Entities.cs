@@ -79,6 +79,50 @@ public sealed class Organization
     public required string Name { get; set; }
     public string? Notes { get; set; }
     public ICollection<SurveySubmission> SurveySubmissions { get; } = [];
+    public ICollection<Issue> Issues { get; } = [];
+}
+
+public enum IssueMatchingStatus
+{
+    Pending,
+    Matched,
+    Failed
+}
+
+public sealed class Issue
+{
+    public int Id { get; set; }
+    public int OrganizationId { get; set; }
+    public required string Title { get; set; }
+    public required string Description { get; set; }
+    public required string RootCause { get; set; }
+    public IssueMatchingStatus MatchingStatus { get; set; }
+    public string? MatchingError { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? MatchedAt { get; set; }
+    public Organization Organization { get; set; } = null!;
+    public ICollection<ViolationMatch> ViolationMatches { get; } = [];
+}
+
+public enum ViolationMatchReviewStatus
+{
+    Open,
+    Confirmed,
+    Dismissed
+}
+
+public sealed class ViolationMatch
+{
+    public int Id { get; set; }
+    public int IssueId { get; set; }
+    public int ControlId { get; set; }
+    public required string MatchedKeywords { get; set; }
+    public decimal MatchScore { get; set; }
+    public bool IsSelfAssessmentDiscrepancy { get; set; }
+    public ViolationMatchReviewStatus ReviewStatus { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public Issue Issue { get; set; } = null!;
+    public Control Control { get; set; } = null!;
 }
 
 public sealed class SurveySubmission

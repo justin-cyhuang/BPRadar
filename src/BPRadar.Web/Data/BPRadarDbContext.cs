@@ -13,6 +13,8 @@ public sealed class BPRadarDbContext(DbContextOptions<BPRadarDbContext> options)
     public DbSet<Organization> Organizations => Set<Organization>();
     public DbSet<SurveySubmission> SurveySubmissions => Set<SurveySubmission>();
     public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
+    public DbSet<Issue> Issues => Set<Issue>();
+    public DbSet<ViolationMatch> ViolationMatches => Set<ViolationMatch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -71,6 +73,36 @@ public sealed class BPRadarDbContext(DbContextOptions<BPRadarDbContext> options)
         modelBuilder.Entity<Organization>(entity =>
         {
             entity.Property(organization => organization.Name).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<Issue>(entity =>
+        {
+            entity.Property(issue => issue.Title).HasMaxLength(200);
+            entity.Property(issue => issue.MatchingStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            entity.HasOne(issue => issue.Organization)
+                .WithMany(organization => organization.Issues)
+                .HasForeignKey(issue => issue.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ViolationMatch>(entity =>
+        {
+            entity.Property(match => match.ReviewStatus)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            entity.Property(match => match.MatchScore).HasPrecision(5, 4);
+            entity.HasIndex(match => new { match.IssueId, match.ControlId })
+                .IsUnique();
+            entity.HasOne(match => match.Issue)
+                .WithMany(issue => issue.ViolationMatches)
+                .HasForeignKey(match => match.IssueId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(match => match.Control)
+                .WithMany()
+                .HasForeignKey(match => match.ControlId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<SurveySubmission>(entity =>
