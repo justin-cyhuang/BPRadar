@@ -1,0 +1,43 @@
+@page "/Organizations/{organizationId:int}/Surveys"
+@model BPRadar.Web.Pages.Organizations.Surveys.IndexModel
+@{
+    ViewData["Title"] = "Surveys due";
+    Layout = "/Pages/Shared/_SurveyLayout.cshtml";
+}
+
+<main>
+    <h1>Surveys due for @Model.OrganizationName</h1>
+
+    @if (Model.ConfirmationMessage is not null)
+    {
+        <p class="confirmation" role="status">@Model.ConfirmationMessage</p>
+    }
+
+    @if (Model.DueTemplates.Count == 0)
+    {
+        <p>There are no surveys due. The next survey will appear automatically when its recurring cadence is reached.</p>
+    }
+    else
+    {
+        @foreach (var template in Model.DueTemplates)
+        {
+            <article class="survey-card">
+                <span class="status">@(template.Status == BPRadar.Web.Features.Surveys.SurveyDueStatus.DueSoon ? "Due soon" : "Overdue")</span>
+                <h2>@template.Name</h2>
+                @if (template.Description is not null)
+                {
+                    <p>@template.Description</p>
+                }
+                <p>@template.Cadence cadence · @template.QuestionCount questions</p>
+                @if (template.NextDueDate is not null)
+                {
+                    <p>
+                        @(template.Status == BPRadar.Web.Features.Surveys.SurveyDueStatus.DueSoon ? "Due on" : "Due since")
+                        <time datetime="@template.NextDueDate.Value.ToString("yyyy-MM-dd")">@template.NextDueDate.Value.ToString("d")</time>
+                    </p>
+                }
+                <a class="button" href="/Organizations/@Model.OrganizationId/Surveys/@template.TemplateId">Complete survey</a>
+            </article>
+        }
+    }
+</main>

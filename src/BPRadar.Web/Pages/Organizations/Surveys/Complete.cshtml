@@ -1,0 +1,71 @@
+@page "/Organizations/{organizationId:int}/Surveys/{templateId:int}"
+@model BPRadar.Web.Pages.Organizations.Surveys.CompleteModel
+@{
+    ViewData["Title"] = Model.Template.Name;
+    Layout = "/Pages/Shared/_SurveyLayout.cshtml";
+}
+
+<main>
+    <a href="/Organizations/@Model.OrganizationId/Surveys">Back to surveys due</a>
+    <h1>@Model.Template.Name</h1>
+    <p>Organization: @Model.OrganizationName</p>
+    @if (Model.Template.Description is not null)
+    {
+        <p>@Model.Template.Description</p>
+    }
+    <p>Choose one Self-Reported State for every question marked Required.</p>
+
+    <form method="post">
+        @Html.AntiForgeryToken()
+        @Html.ValidationSummary()
+        <p>
+            <label for="Input_Label">Submission label <span class="required">Required</span></label>
+            <input id="Input_Label" name="Input.Label" required value="@Model.Input.Label" />
+        </p>
+        <p>
+            <label for="Input_SnapshotDate">Snapshot date <span class="required">Required</span></label>
+            <input
+                id="Input_SnapshotDate"
+                name="Input.SnapshotDate"
+                type="date"
+                max="@DateTime.UtcNow.ToString("yyyy-MM-dd")"
+                required
+                value="@Model.Input.SnapshotDate?.ToString("yyyy-MM-dd")" />
+        </p>
+        @for (var index = 0; index < Model.Template.Questions.Length; index++)
+        {
+            var question = Model.Template.Questions[index];
+            var selectedValue = Model.Input.Answers.Count > index
+                ? Model.Input.Answers[index].ResponseLevel
+                : null;
+            <fieldset>
+                <legend>
+                    @question.Code — @question.Prompt
+                    @if (question.IsRequired)
+                    {
+                        <span class="required">Required</span>
+                    }
+                </legend>
+                <input name="Input.Answers[@index].SurveyQuestionId" type="hidden" value="@question.Id" />
+                <div class="options">
+                    @foreach (var option in BPRadar.Web.Pages.Organizations.Surveys.CompleteModel.ResponseLevels)
+                    {
+                        <label>
+                            <input
+                                type="radio"
+                                name="Input.Answers[@index].ResponseLevel"
+                                value="@option.Value"
+                                checked="@(selectedValue == option.Value)"
+                                required="@question.IsRequired" />
+                            @option.Label
+                        </label>
+                    }
+                </div>
+            </fieldset>
+        }
+
+        <label for="Input_Notes">Summary notes (optional)</label>
+        <textarea id="Input_Notes" name="Input.Notes">@Model.Input.Notes</textarea>
+        <button type="submit">Submit survey</button>
+    </form>
+</main>
