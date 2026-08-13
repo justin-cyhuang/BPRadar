@@ -162,12 +162,24 @@
         <h2 id="survey-heading">Survey transformation summary</h2>
         @if (dashboard.SurveyTracking is null)
         {
-            <p>No survey template is selected.</p>
+            <p>No Survey Template selected. Survey evidence was excluded from this report.</p>
         }
         else
         {
             var tracking = dashboard.SurveyTracking;
             <h3>@tracking.SurveyTemplateName</h3>
+            @if (tracking.History.Length == 0)
+            {
+                <p>No submissions are available for the selected Survey Template.</p>
+            }
+            else if (tracking.Trend.Length == 0)
+            {
+                <p>Submissions are available, but the selected Survey Template has no scored history.</p>
+            }
+            else
+            {
+                <p>Scored submission history is available for the selected Survey Template.</p>
+            }
             <div class="survey-summary">
                 <article>
                     <h4>Latest Self-Reported State</h4>

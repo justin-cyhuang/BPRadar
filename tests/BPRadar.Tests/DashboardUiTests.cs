@@ -11,12 +11,15 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using DashboardApplication = BPRadar.Tests.DashboardUiTests.DashboardApplication;
+using TraceCapture = BPRadar.Tests.DashboardUiTests.TraceCapture;
+using static BPRadar.Tests.DashboardUiTests;
 
 namespace BPRadar.Tests;
 
 [TestClass]
 [DoNotParallelize]
-public sealed class DashboardUiTests
+public sealed partial class DashboardUiTests
 {
     [TestMethod]
     public async Task Root_redirects_to_dashboard()
@@ -175,7 +178,12 @@ public sealed class DashboardUiTests
             page,
             "Target markers appear only on frameworks with a configured target.");
     }
+}
 
+[TestClass]
+[DoNotParallelize]
+public sealed partial class DashboardCsvExportTests
+{
     [TestMethod]
     public async Task Csv_export_contains_all_requested_sections_and_trace_metadata()
     {
@@ -375,7 +383,12 @@ public sealed class DashboardUiTests
             csv,
             "TEST-2,Test control 2,Partial,10,'=1+1");
     }
+}
 
+[TestClass]
+[DoNotParallelize]
+public sealed partial class DashboardPrintReportTests
+{
     [TestMethod]
     public async Task Print_report_renders_audit_handoff_content_and_gap_continuation()
     {
@@ -429,7 +442,12 @@ public sealed class DashboardUiTests
         StringAssert.Contains(report, "window.print()");
         StringAssert.Contains(report, "@media print");
     }
+}
 
+[TestClass]
+[DoNotParallelize]
+public sealed class DashboardReportingEndpointTests
+{
     [TestMethod]
     public async Task Export_routes_apply_identical_scope_and_explicit_no_baseline_semantics()
     {
@@ -543,8 +561,11 @@ public sealed class DashboardUiTests
         Assert.IsFalse(
             output.Contains("secret diagnostic notes", StringComparison.Ordinal));
     }
+}
 
-    private sealed class DashboardApplication(
+public sealed partial class DashboardUiTests
+{
+    internal sealed class DashboardApplication(
         string databasePath,
         WebApplicationFactory<Program> factory) : IAsyncDisposable
     {
@@ -589,7 +610,8 @@ public sealed class DashboardUiTests
 
         public async Task<DashboardSetup> SeedAsync(
             int additionalGapCount = 0,
-            string partialNotes = "Note 2")
+            string partialNotes = "Note 2",
+            bool includeSurveySubmissions = true)
         {
             await using var scope = factory.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<BPRadarDbContext>();
@@ -747,12 +769,11 @@ public sealed class DashboardUiTests
                 SurveyQuestion = surveyQuestion,
                 ResponseLevel = SurveyResponseLevel.High
             });
-            dbContext.AddRange(
-                assessment,
-                untargetedAssessment,
-                profile,
-                previousSubmission,
-                latestSubmission);
+            dbContext.AddRange(assessment, untargetedAssessment, profile, surveyTemplate);
+            if (includeSurveySubmissions)
+            {
+                dbContext.AddRange(previousSubmission, latestSubmission);
+            }
             await dbContext.SaveChangesAsync();
             return new DashboardSetup(
                 organization.Id,
@@ -773,7 +794,7 @@ public sealed class DashboardUiTests
         }
     }
 
-    private sealed record DashboardSetup(
+    internal sealed record DashboardSetup(
         int OrganizationId,
         int AssessmentId,
         int ProfileId,
@@ -784,7 +805,7 @@ public sealed class DashboardUiTests
         int UntargetedAssessmentId,
         int UntargetedFrameworkId);
 
-    private static async Task<HttpResponseMessage> SubmitGetFormAsync(
+    internal static async Task<HttpResponseMessage> SubmitGetFormAsync(
         HttpClient client,
         string page,
         string formId,
@@ -840,7 +861,7 @@ public sealed class DashboardUiTests
         public override DateTimeOffset GetUtcNow() => utcNow;
     }
 
-    private sealed class TraceCapture : IDisposable
+    internal sealed class TraceCapture : IDisposable
     {
         private readonly StringBuilder output = new();
         private readonly TextWriterTraceListener listener;
