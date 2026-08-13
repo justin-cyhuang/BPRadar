@@ -347,6 +347,90 @@ public sealed class IssueLifecycleEndpointTests
         StringAssert.Contains(html, "Dismiss");
     }
 
+    [TestMethod]
+    public async Task Survey_added_after_matching_updates_discrepancy_and_priority_on_read()
+    {
+        var matchingService = new StubIssueMatchingService(new IssueMatchResult(
+            ["missing redundancy", "backup failure"],
+            [
+                new ControlMatchCandidate(
+                    "ISO27001_2022",
+                    "A.8.13",
+                    ["backup failure"],
+                    ["backup"],
+                    0.99m),
+                new ControlMatchCandidate(
+                    "AZURE_WAF",
+                    "RE:05",
+                    ["missing redundancy"],
+                    ["redundancy"],
+                    0.80m)
+            ]));
+        await using var application = IssueApplication.Create(matchingService);
+        using var client = application.CreateClient();
+        var organizationId = await application.CreateOrganizationAsync("Contoso");
+        var issue = await CreateIssueAsync(client, organizationId);
+        using var matchingResponse = await client.PostAsync(
+            $"/api/issues/{issue.Id}/matching",
+            content: null);
+        matchingResponse.EnsureSuccessStatusCode();
+        await SubmitWafSurveyAsync(client, organizationId, "High");
+
+        var detail = await client.GetFromJsonAsync<IssueDetail>(
+            $"/api/issues/{issue.Id}");
+
+        Assert.IsNotNull(detail);
+        Assert.AreEqual("RE:05", detail.ViolationMatches[0].ControlCode);
+        Assert.AreEqual("High", detail.ViolationMatches[0].SelfReportedState);
+        Assert.AreEqual(
+            "Discrepancy",
+            detail.ViolationMatches[0].DiscrepancyStatus);
+        Assert.IsTrue(
+            detail.ViolationMatches[0].IsSelfAssessmentDiscrepancy);
+    }
+
+    [TestMethod]
+    public async Task Lower_survey_response_after_matching_clears_discrepancy_on_read()
+    {
+        var matchingService = new StubIssueMatchingService(new IssueMatchResult(
+            ["missing redundancy"],
+            [
+                new ControlMatchCandidate(
+                    "AZURE_WAF",
+                    "RE:05",
+                    ["missing redundancy"],
+                    ["redundancy"],
+                    0.94m)
+            ]));
+        await using var application = IssueApplication.Create(matchingService);
+        using var client = application.CreateClient();
+        var organizationId = await application.CreateOrganizationAsync("Contoso");
+        await SubmitWafSurveyAsync(
+            client,
+            organizationId,
+            "High",
+            DateTime.UtcNow.Date.AddDays(-1));
+        var issue = await CreateIssueAsync(client, organizationId);
+        using var matchingResponse = await client.PostAsync(
+            $"/api/issues/{issue.Id}/matching",
+            content: null);
+        matchingResponse.EnsureSuccessStatusCode();
+        await SubmitWafSurveyAsync(
+            client,
+            organizationId,
+            "Medium",
+            DateTime.UtcNow.Date);
+
+        var detail = await client.GetFromJsonAsync<IssueDetail>(
+            $"/api/issues/{issue.Id}");
+
+        Assert.IsNotNull(detail);
+        var match = detail.ViolationMatches.Single();
+        Assert.AreEqual("Medium", match.SelfReportedState);
+        Assert.AreEqual("NoDiscrepancy", match.DiscrepancyStatus);
+        Assert.IsFalse(match.IsSelfAssessmentDiscrepancy);
+    }
+
     private static async Task<IssueDetail> CreateIssueAsync(
         HttpClient client,
         int organizationId)
@@ -364,7 +448,8 @@ public sealed class IssueLifecycleEndpointTests
     private static async Task SubmitWafSurveyAsync(
         HttpClient client,
         int organizationId,
-        string responseLevel)
+        string responseLevel,
+        DateTime? snapshotDate = null)
     {
         var templates = await client.GetFromJsonAsync<SurveyTemplateSummary[]>(
             "/api/admin/survey-templates");
@@ -381,7 +466,7 @@ public sealed class IssueLifecycleEndpointTests
             {
                 surveyTemplateId = template.Id,
                 label = "WAF pulse",
-                snapshotDate = DateTime.UtcNow.Date,
+                snapshotDate = snapshotDate ?? DateTime.UtcNow.Date,
                 answers = template.Questions.Select(question => new
                 {
                     surveyQuestionId = question.Id,

@@ -476,6 +476,9 @@ private static async Task<ViolationMatchDetail> ToMatchDetailAsync(
         organizationId,
         match.ControlId,
         cancellationToken);
+    var isSelfAssessmentDiscrepancy =
+        selfReportedState is SurveyResponseLevel.High or
+            SurveyResponseLevel.VeryHigh;
     return new ViolationMatchDetail(
         match.Id,
         match.ControlId,
@@ -486,10 +489,10 @@ private static async Task<ViolationMatchDetail> ToMatchDetailAsync(
         JsonSerializer.Deserialize<string[]>(match.MatchedKeywords) ?? [],
         match.MatchScore,
         match.ReviewStatus.ToString(),
-        match.IsSelfAssessmentDiscrepancy,
+        isSelfAssessmentDiscrepancy,
         selfReportedState is null
             ? "NoSurveyResponse"
-            : match.IsSelfAssessmentDiscrepancy
+            : isSelfAssessmentDiscrepancy
                 ? "Discrepancy"
                 : "NoDiscrepancy",
         selfReportedState?.ToString());
