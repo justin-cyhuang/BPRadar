@@ -1,0 +1,26 @@
+@page "/Organizations/Issues"
+@model BPRadar.Web.Pages.Organizations.Issues.OrganizationsModel
+@{
+    ViewData["Title"] = "Organization Issues";
+    Layout = "/Pages/Shared/_IssueLayout.cshtml";
+}
+
+<main>
+    <h1>Organization Issues</h1>
+    <p><a href="/Organizations/Surveys">View organization surveys</a></p>
+    @if (Model.Organizations.Count == 0)
+    {
+        <p>No organizations are available.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var organization in Model.Organizations)
+            {
+                <li>
+                    <a href="/Organizations/@organization.Id/Issues">@organization.Name</a>
+                </li>
+            }
+        </ul>
+    }
+</main>

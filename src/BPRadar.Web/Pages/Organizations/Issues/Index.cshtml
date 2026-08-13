@@ -1,0 +1,69 @@
+@page "/Organizations/{organizationId:int}/Issues"
+@model BPRadar.Web.Pages.Organizations.Issues.IndexModel
+@{
+    ViewData["Title"] = "Issues";
+    Layout = "/Pages/Shared/_IssueLayout.cshtml";
+}
+
+<main>
+    <h1>Issues for @Model.OrganizationName</h1>
+    <p>Review candidate Violation Matches identified from operational Issues.</p>
+    @if (Model.ConfirmationMessage is not null)
+    {
+        <p class="confirmation" role="status">@Model.ConfirmationMessage</p>
+    }
+
+    @if (Model.Issues.Count == 0)
+    {
+        <p>No Issues have been recorded for this organization.</p>
+    }
+    else
+    {
+        @foreach (var issue in Model.Issues)
+        {
+            <details class="issue-card">
+                <summary><span class="status">@issue.MatchingStatus</span> @issue.Title</summary>
+                <p>@issue.Description</p>
+                @if (!string.IsNullOrWhiteSpace(issue.MatchingError))
+                {
+                    <p class="error">@issue.MatchingError</p>
+                }
+
+                @if (issue.MatchingStatus == "Matched" && issue.ViolationMatches.Length == 0)
+                {
+                    <p>Matching completed with no Violation Matches.</p>
+                }
+
+                @foreach (var match in issue.ViolationMatches)
+                {
+                    var isDismissed = match.ReviewStatus == "Dismissed";
+                    var cssClass = string.Join(
+                        " ",
+                        match.IsSelfAssessmentDiscrepancy ? "discrepancy" : null,
+                        isDismissed ? "dismissed" : null).Trim();
+                    <details class="match @cssClass" open="@(!isDismissed ? "open" : null)">
+                        <summary>@match.ControlCode: @match.ControlTitle · @match.ReviewStatus</summary>
+                        @if (match.IsSelfAssessmentDiscrepancy)
+                        {
+                            <p class="discrepancy-label">Self-Assessment Discrepancy</p>
+                        }
+                        <p>@match.ControlDescription</p>
+                        <p>Match score: @match.MatchScore.ToString("P0")</p>
+                        <p>Self-Reported State: @(match.SelfReportedState ?? "No Survey response")</p>
+                        <p>Matched keywords: @string.Join(", ", match.MatchedKeywords)</p>
+                        @if (!string.IsNullOrWhiteSpace(match.GuidanceUrl))
+                        {
+                            <p><a href="@match.GuidanceUrl">Control guidance</a></p>
+                        }
+                        <form method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="violationMatchId" value="@match.Id" />
+                            <button type="submit" formaction="?handler=Review" name="reviewStatus" value="Confirmed">Confirm</button>
+                            <button class="button-secondary" type="submit" formaction="?handler=Review" name="reviewStatus" value="Dismissed">Dismiss</button>
+                        </form>
+                    </details>
+                }
+            </details>
+        }
+    }
+</main>
