@@ -5,6 +5,7 @@
 @using BPRadar.Web.Features.Surveys
 @using Microsoft.AspNetCore.Html
 @using System.Globalization
+@using static BPRadar.Web.Features.Dashboard.ChartSvgGeometry
 @{
     ViewData["Title"] = "Audit handoff report";
     Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
@@ -250,72 +251,6 @@
 </main>
 
 @functions {
-    private const double RadarCenterX = 300;
-    private const double RadarCenterY = 220;
-    private const double RadarRadius = 160;
-
-    private static string RadarGridPoints(int axisCount, decimal level) =>
-        RadarSeriesPoints(Enumerable.Repeat<decimal?>(level, axisCount).ToArray());
-
-    private static string RadarSeriesPoints(IReadOnlyList<decimal?> values) =>
-        string.Join(
-            " ",
-            values.Select((value, index) =>
-                RadarPoint(index, values.Count, RadarRadius * (double)value!.Value / 100d)));
-
-    private static string RadarValueCoordinate(
-        int index,
-        int count,
-        decimal value,
-        bool xCoordinate)
-    {
-        var point = RadarPoint(
-            index,
-            count,
-            RadarRadius * (double)value / 100d).Split(',');
-        return xCoordinate ? point[0] : point[1];
-    }
-
-    private static string RadarCoordinate(
-        int index,
-        int count,
-        double radius,
-        bool xCoordinate)
-    {
-        var point = RadarPoint(index, count, radius).Split(',');
-        return xCoordinate ? point[0] : point[1];
-    }
-
-    private static string RadarPoint(int index, int count, double radius)
-    {
-        var angle = -Math.PI / 2d + 2d * Math.PI * index / Math.Max(count, 1);
-        return string.Create(
-            CultureInfo.InvariantCulture,
-            $"{RadarCenterX + Math.Cos(angle) * radius:0.##}," +
-            $"{RadarCenterY + Math.Sin(angle) * radius:0.##}");
-    }
-
-    private static string RadarTextAnchor(int index, int count)
-    {
-        var x = double.Parse(
-            RadarCoordinate(index, count, 190, true),
-            CultureInfo.InvariantCulture);
-        return x < RadarCenterX - 5 ? "end" : x > RadarCenterX + 5 ? "start" : "middle";
-    }
-
-    private static string TrendPoints(IReadOnlyList<SurveyTrendPoint> points) =>
-        string.Join(
-            " ",
-            points.Select((point, index) =>
-                $"{TrendX(index, points.Count)},{TrendY(point.Score)}"));
-
-    private static string TrendX(int index, int count) =>
-        (count <= 1 ? 310d : 60d + 500d * index / (count - 1d))
-        .ToString("0.##", CultureInfo.InvariantCulture);
-
-    private static double TrendY(decimal score) =>
-        20d + (100d - (double)score) * 1.8d;
-
     private static IHtmlContent SvgText(
         string cssClass,
         string x,
