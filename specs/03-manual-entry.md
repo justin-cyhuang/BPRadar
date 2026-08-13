@@ -18,8 +18,9 @@ through the web UI (as opposed to bulk import — see `04-import.md`).
   expand/"more"), and an inline edit control for:
   - **Status** — dropdown/segmented control:
     Not Assessed / Compliant / Partial / Non-Compliant / N/A
-  - **Score** — optional numeric input (shown only if the framework/domain
-    uses numeric scoring; otherwise hidden)
+  - **Score** — retained as optional internal/import reference data, but hidden
+    from the assessor-facing checklist until a detailed user guidance rubric
+    defines how numeric levels should be evaluated
   - **Notes** — free-text, expandable textarea
   - **Evidence URL** — optional text/link input
 - Changes save on blur / row-level "Save" (no separate global submit step
@@ -33,9 +34,9 @@ through the web UI (as opposed to bulk import — see `04-import.md`).
 ## Validation rules
 - Status is required to consider a control "assessed" (default is
   `NotAssessed`, which does not count toward completion).
-- Score, if provided, must be within the framework's configured numeric
-  range (default 0–100 unless a domain overrides it) — validated client- and
-  server-side.
+- Score, if supplied through an internal/import flow, must be within the
+  framework's configured numeric range (default 0–100 unless a domain
+  overrides it) — validated server-side.
 - Notes/EvidenceUrl are optional free text; EvidenceUrl is validated as a
   well-formed URL if non-empty.
 

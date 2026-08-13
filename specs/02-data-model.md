@@ -130,7 +130,7 @@ match it (update this spec first if the model needs to change).
 | AssessmentId | int (FK → Assessment) | |
 | ControlId | int (FK → Control) | |
 | Status | enum `ComplianceStatus` | Compliant / Partial / NonCompliant / NotApplicable / NotAssessed |
-| Score | decimal? | optional numeric score, e.g. 0–100 or 0–5 maturity |
+| Score | decimal? | optional internal/import reference score, e.g. 0–100 or 0–5 maturity; not shown in assessor-facing UI until a user guidance rubric is defined |
 | Notes | string? | assessor free-text notes |
 | EvidenceUrl | string? | optional link/reference to evidence |
 | ExternalRecordId | string? | optional source-system identifier from an import |

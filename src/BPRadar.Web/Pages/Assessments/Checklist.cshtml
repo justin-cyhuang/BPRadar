@@ -57,20 +57,10 @@
                                 </select>
                             </label>
 
-                            @if (domain.UsesNumericScoring)
-                            {
-                                <label>
-                                    Score
-                                    <input
-                                        class="score"
-                                        type="number"
-                                        min="@domain.MinimumScore"
-                                        max="@domain.MaximumScore"
-                                        step="0.01"
-                                        value="@(control.Score?.ToString("0.##", CultureInfo.InvariantCulture))"
-                                        aria-label="Score for @control.Code" />
-                                </label>
-                            }
+                            <input
+                                class="score"
+                                type="hidden"
+                                value="@(control.Score?.ToString("0.##", CultureInfo.InvariantCulture))" />
 
                             <label>
                                 Evidence URL
@@ -138,7 +128,7 @@
 
             const score = row.querySelector(".score");
             const evidenceUrl = row.querySelector(".evidence-url");
-            if ((score && !score.reportValidity()) || !evidenceUrl.reportValidity()) {
+            if (!evidenceUrl.reportValidity()) {
                 return;
             }
 

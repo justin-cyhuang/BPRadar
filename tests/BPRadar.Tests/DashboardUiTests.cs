@@ -57,6 +57,8 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "name=\"FrameworkId\"");
         StringAssert.Contains(page, "name=\"DomainId\"");
         StringAssert.Contains(page, "name=\"GapStatus\"");
+        Assert.IsFalse(page.Contains("<th>Score</th>", StringComparison.Ordinal));
+        Assert.IsFalse(page.Contains("value=\"Score\"", StringComparison.Ordinal));
         StringAssert.Contains(page, "TEST-2");
         StringAssert.Contains(page, "TEST-3");
         StringAssert.Contains(
@@ -74,6 +76,10 @@ public sealed class DashboardUiTests
             checklist,
             $"id=\"control-{setup.PartialControlId}\"");
         StringAssert.Contains(checklist, "window.location.hash");
+        Assert.IsFalse(checklist.Contains(
+            "aria-label=\"Score for",
+            StringComparison.Ordinal));
+        Assert.IsFalse(checklist.Contains("type=\"number\"", StringComparison.Ordinal));
     }
 
     private sealed class DashboardApplication(

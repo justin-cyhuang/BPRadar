@@ -177,7 +177,8 @@
                 <label>
                     Sort by
                     <select name="Sort">
-                        @foreach (var sort in Enum.GetValues<DashboardGapSort>())
+                        @foreach (var sort in Enum.GetValues<DashboardGapSort>()
+                            .Where(value => value != DashboardGapSort.Score))
                         {
                             <option value="@sort" selected="@(sort == Model.Sort)">@sort</option>
                         }
@@ -209,7 +210,6 @@
                                 <th>Control Code</th>
                                 <th>Title</th>
                                 <th>Status</th>
-                                <th>Score</th>
                                 <th>Notes</th>
                             </tr>
                         </thead>
@@ -232,7 +232,6 @@
                                     </td>
                                     <td>@gap.Title</td>
                                     <td>@(gap.Status == ComplianceStatus.NonCompliant ? "Non-Compliant" : "Partial")</td>
-                                    <td>@(gap.Score?.ToString("0.##") ?? "—")</td>
                                     <td>@gap.Notes</td>
                                 </tr>
                             }

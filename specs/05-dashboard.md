@@ -28,7 +28,8 @@ For each included Assessment, show a summary card with:
 ## Gap drill-down
 - Below the overview cards, a filterable/sortable table of all gap items
   (Status = Partial or Non-Compliant) across the selected Assessments:
-  Framework, Domain, Control Code, Title, Status, Score, Notes.
+  Framework, Domain, Control Code, Title, Status, Notes. Numeric assessment
+  Score remains internal reference data until a user-facing rubric is defined.
 - Filters: by Framework, by Domain, by Status (Partial vs Non-Compliant).
 - Clicking a row deep-links to that control's entry in the manual entry view
   (`03-manual-entry.md`) for quick remediation/follow-up editing.
