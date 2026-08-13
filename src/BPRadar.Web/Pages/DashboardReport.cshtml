@@ -46,7 +46,7 @@
         </p>
         <p class="report-metadata">
             Generated @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
-            · Correlation ID: @Model.CorrelationId
+            · Correlation ID: @Model.ReportCorrelationId
         </p>
     </header>
 
@@ -246,7 +246,7 @@
 
     <footer class="report-footer">
         BPRadar audit handoff · Generated @Model.GeneratedAtUtc.ToString("O")
-        · Correlation ID: @Model.CorrelationId
+        · Correlation ID: @Model.ReportCorrelationId
     </footer>
 </main>
 
