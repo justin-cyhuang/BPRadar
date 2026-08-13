@@ -4,52 +4,23 @@ using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.Dashboard;
 using BPRadar.Web.Features.Reporting;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace BPRadar.Web.Pages;
 
 public sealed class DashboardModel(
     BPRadarDbContext dbContext,
-    TimeProvider timeProvider) : PageModel
+    TimeProvider timeProvider) : DashboardExportScopePageModel
 {
-    [BindProperty(SupportsGet = true)]
-    public int? OrganizationId { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int[] AssessmentIds { get; set; } = [];
-
-    [BindProperty(SupportsGet = true)]
-    public int? BaselineProfileId { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int? SurveyTemplateId { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int? FrameworkId { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public int? DomainId { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public ComplianceStatus? GapStatus { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public DashboardGapSort Sort { get; set; } = DashboardGapSort.ControlCode;
-
-    [BindProperty(SupportsGet = true)]
-    public bool SortDescending { get; set; }
-
-    [BindProperty(SupportsGet = true)]
-    public bool IncludeSurveyDomainDeltas { get; set; }
-
     public DashboardOrganizationOption[] Organizations { get; private set; } = [];
 
     public DashboardView? Dashboard { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
-        await LoadDashboardAsync(cancellationToken);
+        await LoadDashboardAsync(
+            requireRequestedOrganization: false,
+            cancellationToken);
     }
 
     public async Task<IActionResult> OnGetCsvAsync(
@@ -60,11 +31,18 @@ public sealed class DashboardModel(
             TraceEventType.Start,
             "Reporting",
             "CsvExportStarted",
-            $"organizationId={OrganizationId?.ToString() ?? "default"}");
-        await LoadDashboardAsync(cancellationToken);
-        if (Dashboard is null || OrganizationId is null)
+            $"OrganizationId={OrganizationId?.ToString() ?? "default"}");
+        if (!ModelState.IsValid)
         {
-            return NotFound();
+            return ExportScopeValidationError();
+        }
+
+        var scopeFound = await LoadDashboardAsync(
+            requireRequestedOrganization: true,
+            cancellationToken);
+        if (!scopeFound || Dashboard is null || OrganizationId is null)
+        {
+            return ExportScopeNotFound();
         }
 
         var organizationName = Organizations
@@ -75,7 +53,7 @@ public sealed class DashboardModel(
             Dashboard,
             organizationName,
             exportedAtUtc,
-            BPRadarTrace.CorrelationId ?? HttpContext.TraceIdentifier,
+            CorrelationId,
             IncludeSurveyDomainDeltas);
         var fileName =
             $"bpradar-audit-{exportedAtUtc:yyyyMMdd-HHmmss}.csv";
@@ -83,14 +61,18 @@ public sealed class DashboardModel(
             TraceEventType.Stop,
             "Reporting",
             "CsvExportCompleted",
-            $"organizationId={OrganizationId} assessments={Dashboard.SelectedAssessmentIds.Length} " +
+            $"{TraceScope(Dashboard)} " +
+            $"assessments={Dashboard.SelectedAssessmentIds.Length} " +
             $"gaps={Dashboard.Gaps.Length} bytes={content.Length}",
             timer.ElapsedMilliseconds);
         return File(content, "text/csv; charset=utf-8", fileName);
     }
 
-    private async Task LoadDashboardAsync(CancellationToken cancellationToken)
+    private async Task<bool> LoadDashboardAsync(
+        bool requireRequestedOrganization,
+        CancellationToken cancellationToken)
     {
+        var requestedOrganizationId = OrganizationId;
         Organizations = await dbContext.Organizations
             .AsNoTracking()
             .Where(organization => dbContext.Assessments.Any(
@@ -102,7 +84,15 @@ public sealed class DashboardModel(
             .ToArrayAsync(cancellationToken);
         if (Organizations.Length == 0)
         {
-            return;
+            return false;
+        }
+
+        if (requireRequestedOrganization &&
+            (requestedOrganizationId is null ||
+             Organizations.All(
+                 organization => organization.Id != requestedOrganizationId)))
+        {
+            return false;
         }
 
         if (OrganizationId is null ||
@@ -111,26 +101,14 @@ public sealed class DashboardModel(
             OrganizationId = Organizations[0].Id;
         }
 
-        var baselineSelectionSpecified =
-            Request.Query.ContainsKey(nameof(BaselineProfileId));
         Dashboard = await DashboardService.GetAsync(
             dbContext,
-            new DashboardRequest(
-                OrganizationId.Value,
-                AssessmentIds,
-                BaselineProfileId,
-                UseDefaultBaseline: !baselineSelectionSpecified,
-                FrameworkId,
-                DomainId,
-                GapStatus,
-                Sort,
-                SortDescending,
-                SurveyTemplateId,
-                timeProvider.GetUtcNow().UtcDateTime.Date),
+            CreateDashboardRequest(timeProvider.GetUtcNow().UtcDateTime.Date),
             cancellationToken);
         AssessmentIds = Dashboard.SelectedAssessmentIds;
         BaselineProfileId = Dashboard.SelectedBaselineProfileId;
         SurveyTemplateId = Dashboard.SelectedSurveyTemplateId;
+        return true;
     }
 }
 

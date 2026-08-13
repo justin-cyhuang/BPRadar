@@ -1,6 +1,10 @@
+using System.Diagnostics;
 using System.Net;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using BPRadar.Web.Data;
+using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.Surveys;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,6 +15,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace BPRadar.Tests;
 
 [TestClass]
+[DoNotParallelize]
 public sealed class DashboardUiTests
 {
     [TestMethod]
@@ -333,6 +338,120 @@ public sealed class DashboardUiTests
         StringAssert.Contains(report, "@media print");
     }
 
+    [TestMethod]
+    public async Task Export_routes_apply_identical_scope_and_explicit_no_baseline_semantics()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(additionalGapCount: 1);
+        var scope =
+            $"organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            "&baselineProfileId=" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&gapStatus=NonCompliant&sort=Title&sortDescending=true";
+
+        using var csvResponse = await client.GetAsync($"/Dashboard?handler=Csv&{scope}");
+        using var reportResponse = await client.GetAsync($"/Dashboard/Report?{scope}");
+
+        Assert.AreEqual(HttpStatusCode.OK, csvResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, reportResponse.StatusCode);
+        var csv = await csvResponse.Content.ReadAsStringAsync();
+        var report = WebUtility.HtmlDecode(
+            await reportResponse.Content.ReadAsStringAsync());
+        Assert.IsLessThan(
+            csv.IndexOf("EXTRA-001", StringComparison.Ordinal),
+            csv.IndexOf("TEST-3", StringComparison.Ordinal));
+        Assert.IsLessThan(
+            report.IndexOf("EXTRA-001", StringComparison.Ordinal),
+            report.IndexOf("TEST-3", StringComparison.Ordinal));
+        Assert.IsFalse(csv.Contains("TEST-2", StringComparison.Ordinal));
+        Assert.IsFalse(report.Contains("TEST-2", StringComparison.Ordinal));
+        StringAssert.Contains(csv, "Q3 pulse");
+        StringAssert.Contains(report, "Transformation pulse");
+        Assert.IsFalse(csv.Contains(",80,-46.67,", StringComparison.Ordinal));
+        Assert.IsFalse(report.Contains(">Target<", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Export_routes_return_correlation_bearing_problem_responses()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        foreach (var (path, expectedStatus) in new[]
+                 {
+                     (
+                         "/Dashboard?handler=Csv&organizationId=999999",
+                         HttpStatusCode.NotFound),
+                     (
+                         "/Dashboard/Report?organizationId=999999",
+                         HttpStatusCode.NotFound),
+                     (
+                         "/Dashboard?handler=Csv",
+                         HttpStatusCode.NotFound),
+                     (
+                         "/Dashboard/Report",
+                         HttpStatusCode.NotFound),
+                     (
+                         $"/Dashboard?handler=Csv&organizationId={setup.OrganizationId}&sort=invalid",
+                         HttpStatusCode.BadRequest),
+                     (
+                         $"/Dashboard/Report?organizationId={setup.OrganizationId}&sort=invalid",
+                         HttpStatusCode.BadRequest)
+                 })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, path);
+            request.Headers.Add("X-Correlation-ID", "missing-export-scope-32");
+            using var response = await client.SendAsync(request);
+
+            Assert.AreEqual(expectedStatus, response.StatusCode);
+            Assert.AreEqual(
+                "application/problem+json",
+                response.Content.Headers.ContentType?.MediaType);
+            using var problem = JsonDocument.Parse(
+                await response.Content.ReadAsStringAsync());
+            Assert.AreEqual(
+                "missing-export-scope-32",
+                problem.RootElement.GetProperty("correlationId").GetString());
+        }
+    }
+
+    [TestMethod]
+    public async Task Export_completion_traces_include_business_ids_without_notes()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(
+            partialNotes: "secret diagnostic notes");
+        using var trace = new TraceCapture();
+        var scope =
+            $"organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}";
+
+        using var csvResponse = await client.GetAsync($"/Dashboard?handler=Csv&{scope}");
+        using var reportResponse = await client.GetAsync($"/Dashboard/Report?{scope}");
+
+        Assert.AreEqual(HttpStatusCode.OK, csvResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, reportResponse.StatusCode);
+        var output = trace.Output;
+        StringAssert.Contains(output, "operation=CsvExportCompleted");
+        StringAssert.Contains(output, "operation=PrintReportCompleted");
+        StringAssert.Contains(output, $"OrganizationId={setup.OrganizationId}");
+        StringAssert.Contains(output, $"AssessmentIds={setup.AssessmentId}");
+        StringAssert.Contains(output, $"FrameworkIds={setup.TargetedFrameworkId}");
+        StringAssert.Contains(output, $"DomainId={setup.DomainId}");
+        StringAssert.Contains(output, $"SurveyTemplateId={setup.SurveyTemplateId}");
+        Assert.IsFalse(
+            output.Contains("secret diagnostic notes", StringComparison.Ordinal));
+    }
+
     private sealed class DashboardApplication(
         string databasePath,
         WebApplicationFactory<Program> factory) : IAsyncDisposable
@@ -346,24 +465,28 @@ public sealed class DashboardUiTests
                 Path.GetTempPath(),
                 $"bpradar-dashboard-ui-{Guid.NewGuid():N}.db");
             var factory = new WebApplicationFactory<Program>()
-                .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+                .WithWebHostBuilder(builder =>
                 {
-                    services.RemoveAll<DbContextOptions<BPRadarDbContext>>();
-                    services.RemoveAll<TimeProvider>();
-                    services.AddDbContext<BPRadarDbContext>(
-                        options => options.UseSqlite(
-                            $"Data Source={databasePath};Pooling=False"));
-                    services.AddSingleton<TimeProvider>(
-                        new FixedTimeProvider(
-                            new DateTimeOffset(
-                                2026,
-                                8,
-                                13,
-                                8,
-                                0,
-                                0,
-                                TimeSpan.Zero)));
-                }));
+                    builder.UseSetting("Tracing:Level", "All");
+                    builder.ConfigureServices(services =>
+                    {
+                        services.RemoveAll<DbContextOptions<BPRadarDbContext>>();
+                        services.RemoveAll<TimeProvider>();
+                        services.AddDbContext<BPRadarDbContext>(
+                            options => options.UseSqlite(
+                                $"Data Source={databasePath};Pooling=False"));
+                        services.AddSingleton<TimeProvider>(
+                            new FixedTimeProvider(
+                                new DateTimeOffset(
+                                    2026,
+                                    8,
+                                    13,
+                                    8,
+                                    0,
+                                    0,
+                                    TimeSpan.Zero)));
+                    });
+                });
             return new DashboardApplication(databasePath, factory);
         }
 
@@ -572,5 +695,32 @@ public sealed class DashboardUiTests
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    private sealed class TraceCapture : IDisposable
+    {
+        private readonly StringBuilder output = new();
+        private readonly TextWriterTraceListener listener;
+
+        public TraceCapture()
+        {
+            listener = new TextWriterTraceListener(new StringWriter(output));
+            BPRadarTrace.Source.Listeners.Add(listener);
+        }
+
+        public string Output
+        {
+            get
+            {
+                listener.Flush();
+                return output.ToString();
+            }
+        }
+
+        public void Dispose()
+        {
+            BPRadarTrace.Source.Listeners.Remove(listener);
+            listener.Dispose();
+        }
     }
 }
