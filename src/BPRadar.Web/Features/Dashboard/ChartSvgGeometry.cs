@@ -7,6 +7,8 @@ public static class ChartSvgGeometry
     private const double RadarCenterX = 300;
     private const double RadarCenterY = 220;
     private const double RadarRadius = 160;
+    public static IReadOnlyList<int> TrendScaleLevels { get; } =
+        [0, 25, 50, 75, 100];
 
     public static string RadarGridPoints(int axisCount, decimal level) =>
         RadarSeriesPoints(
@@ -73,6 +75,16 @@ public static class ChartSvgGeometry
     public static double TrendY(decimal score) =>
         20d + (100d - (double)score) * 1.8d;
 
+    public static string TrendDateLabel(SurveyTrendPoint point) =>
+        point.SnapshotDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+    public static string TrendPointDescription(SurveyTrendPoint point) =>
+        $"{TrendDateLabel(point)}: Self-Reported State score " +
+        $"{point.Score.ToString("0.#", CultureInfo.InvariantCulture)}%";
+
+    public static string TrendTextAnchor(int index, int count) =>
+        index == 0 ? "start" : index == count - 1 ? "end" : "middle";
+
     private static string RadarPoint(int index, int count, double radius)
     {
         var angle = -Math.PI / 2d + 2d * Math.PI * index / Math.Max(count, 1);
@@ -82,3 +94,7 @@ public static class ChartSvgGeometry
             $"{RadarCenterY + Math.Sin(angle) * radius:0.##}");
     }
 }
+
+public sealed record SurveyTrendChartModel(
+    string Id,
+    IReadOnlyList<SurveyTrendPoint> Points);
