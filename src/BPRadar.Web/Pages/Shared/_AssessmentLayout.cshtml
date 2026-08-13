@@ -8,13 +8,28 @@
         body { color: #202124; font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 70rem; padding: 0 1rem; }
         fieldset, form { border: 1px solid #d0d7de; border-radius: .5rem; margin: 1rem 0; padding: 1rem; }
         label { display: block; font-weight: 600; margin-top: .75rem; }
-        input, select { box-sizing: border-box; max-width: 40rem; padding: .5rem; width: 100%; }
+        input, select, textarea { box-sizing: border-box; max-width: 40rem; padding: .5rem; width: 100%; }
         table { border-collapse: collapse; margin-top: 1rem; width: 100%; }
         th, td { border-bottom: 1px solid #d0d7de; padding: .75rem; text-align: left; }
         .button, button { background: #0969da; border: 0; border-radius: .375rem; color: white; cursor: pointer; display: inline-block; font-size: 1rem; padding: .65rem 1rem; text-decoration: none; }
         .confirmation { background: #e7f6ec; border: 1px solid #238636; padding: 1rem; }
         .separator { color: #57606a; font-weight: 600; }
         .validation-summary-errors, .field-validation-error { color: #cf222e; }
+        .overall-progress { background: #ddf4ff; border-radius: .5rem; padding: 1rem; }
+        .domain { border: 1px solid #d0d7de; border-radius: .5rem; margin: 1rem 0; }
+        .domain > summary { align-items: center; cursor: pointer; display: flex; font-size: 1.1rem; justify-content: space-between; padding: 1rem; }
+        .control-list { border-top: 1px solid #d0d7de; }
+        .control-row { padding: 1rem; }
+        .control-row + .control-row { border-top: 1px solid #d8dee4; }
+        .control-row header { align-items: start; display: flex; gap: 1rem; justify-content: space-between; }
+        .control-row h2 { display: inline; font-size: 1rem; margin: 0 0 0 .5rem; }
+        .control-code { color: #57606a; font-family: ui-monospace, monospace; font-weight: 600; }
+        .control-fields { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+        .description, .notes { margin: .75rem 0; }
+        .description summary, .notes summary { color: #0969da; cursor: pointer; }
+        .save-state { color: #1a7f37; font-size: .9rem; }
+        .row-error { color: #cf222e; min-height: 1.25rem; }
+        .save-row { font-size: .9rem; padding: .45rem .75rem; }
     </style>
 </head>
 <body>

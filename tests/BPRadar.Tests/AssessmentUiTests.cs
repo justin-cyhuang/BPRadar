@@ -1,6 +1,8 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.RegularExpressions;
 using BPRadar.Web.Data;
+using BPRadar.Web.Features.ManualEntry;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -43,10 +45,27 @@ public sealed partial class AssessmentUiTests
             ]));
 
         Assert.AreEqual(HttpStatusCode.Redirect, submitResponse.StatusCode);
-        Assert.AreEqual(
-            "/Assessments",
-            submitResponse.Headers.Location?.OriginalString);
-        await application.MarkOneResultCompliantAsync();
+        StringAssert.StartsWith(
+            submitResponse.Headers.Location?.OriginalString,
+            "/Assessments/");
+        using var checklistResponse = await client.GetAsync(
+            submitResponse.Headers.Location);
+        Assert.AreEqual(HttpStatusCode.OK, checklistResponse.StatusCode);
+        var checklistPage = await checklistResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(checklistPage, "Overall progress:");
+        StringAssert.Contains(checklistPage, "0/4 assessed");
+        StringAssert.Contains(checklistPage, "TEST-1");
+        StringAssert.Contains(checklistPage, "Save row");
+        var (assessmentId, controlId) = await application.GetAssessmentAndControlIdsAsync();
+        using var saveResponse = await client.PutAsJsonAsync(
+            $"/api/assessments/{assessmentId}/results/{controlId}",
+            new SaveAssessmentResultRequest("Compliant", 90m, null, null));
+        Assert.AreEqual(HttpStatusCode.OK, saveResponse.StatusCode);
+        var savedResult = await saveResponse.Content
+            .ReadFromJsonAsync<SavedAssessmentResult>();
+        Assert.IsNotNull(savedResult);
+        Assert.AreEqual(1, savedResult.OverallProgress.Assessed);
+        Assert.AreEqual(4, savedResult.OverallProgress.Total);
 
         using var listResponse = await client.GetAsync("/Assessments");
         Assert.AreEqual(HttpStatusCode.OK, listResponse.StatusCode);
@@ -125,14 +144,13 @@ public sealed partial class AssessmentUiTests
             return framework.Id;
         }
 
-        public async Task MarkOneResultCompliantAsync()
+        public async Task<(int AssessmentId, int ControlId)>
+            GetAssessmentAndControlIdsAsync()
         {
             await using var scope = factory.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<BPRadarDbContext>();
-            var result = await dbContext.AssessmentResults.FirstAsync();
-            result.Status = ComplianceStatus.Compliant;
-            result.UpdatedAt = DateTime.UtcNow;
-            await dbContext.SaveChangesAsync();
+            var result = await dbContext.AssessmentResults.AsNoTracking().FirstAsync();
+            return (result.AssessmentId, result.ControlId);
         }
 
         public async Task<Assessment> GetAssessmentAsync()
