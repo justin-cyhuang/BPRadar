@@ -58,6 +58,10 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "name=\"FrameworkId\"");
         StringAssert.Contains(page, "name=\"DomainId\"");
         StringAssert.Contains(page, "name=\"GapStatus\"");
+        StringAssert.Contains(page, "Export CSV");
+        StringAssert.Contains(page, "Print / Save as PDF");
+        StringAssert.Contains(page, "handler=Csv");
+        StringAssert.Contains(page, "/Dashboard/Report?");
         StringAssert.Contains(page, "TEST-2");
         StringAssert.Contains(page, "TEST-3");
         StringAssert.Contains(
@@ -153,6 +157,157 @@ public sealed class DashboardUiTests
             "Target markers appear only on frameworks with a configured target.");
     }
 
+    [TestMethod]
+    public async Task Csv_export_contains_all_requested_sections_and_trace_metadata()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/Dashboard?handler=Csv" +
+            $"&organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&baselineProfileId={setup.ProfileId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&includeSurveyDomainDeltas=true");
+        request.Headers.Add("X-Correlation-ID", "export-correlation-23");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        Assert.AreEqual("text/csv", response.Content.Headers.ContentType?.MediaType);
+        var csv = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "Report Metadata");
+        StringAssert.Contains(csv, "Organization,Contoso");
+        StringAssert.Contains(csv, "Exported UTC,2026-08-13T08:00:00.0000000Z");
+        StringAssert.Contains(csv, "Correlation ID,export-correlation-23");
+        StringAssert.Contains(csv, "Framework Summary");
+        StringAssert.Contains(
+            csv,
+            "Framework,Version,Assessment,Completion %,Compliance %,Target %,Delta %,Gap Count");
+        StringAssert.Contains(
+            csv,
+            "Test Framework,1.0,Current review,75,33.33,80,-46.67,2");
+        StringAssert.Contains(csv, "Gap List");
+        StringAssert.Contains(
+            csv,
+            "Framework,Domain,Control Code,Title,Status,Score,Notes");
+        StringAssert.Contains(
+            csv,
+            "Test Framework,TEST - Test Domain,TEST-2,Test control 2,Partial,10,Note 2");
+        StringAssert.Contains(
+            csv,
+            "Test Framework,TEST - Test Domain,TEST-3,Test control 3,Non-Compliant,20,Note 3");
+        StringAssert.Contains(csv, "Survey Submission History");
+        StringAssert.Contains(
+            csv,
+            "Snapshot Date,Submission,Profile Score,Delta,Key Notes");
+        StringAssert.Contains(csv, "2026-07-01,Q3 pulse,75,25,Latest snapshot");
+        StringAssert.Contains(csv, "2026-04-01,Q2 pulse,50,,Previous snapshot");
+        StringAssert.Contains(csv, "Survey Domain Deltas");
+        StringAssert.Contains(csv, "Domain,Previous Score,Latest Score,Delta");
+        StringAssert.Contains(csv, "TEST - Test Domain,50,75,25");
+    }
+
+    [TestMethod]
+    public async Task Csv_export_respects_active_gap_filters()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?handler=Csv" +
+            $"&organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            "&gapStatus=Partial");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var csv = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "TEST-2");
+        Assert.IsFalse(csv.Contains("TEST-3", StringComparison.Ordinal));
+        Assert.IsFalse(csv.Contains("Untargeted Framework", StringComparison.Ordinal));
+        Assert.IsFalse(csv.Contains("Survey Domain Deltas", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Csv_export_escapes_free_form_audit_evidence()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(
+            partialNotes: "Needs, \"audit\"\r\nfollow-up");
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?handler=Csv" +
+            $"&organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var csv = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "\"Needs, \"\"audit\"\"\r\nfollow-up\"");
+    }
+
+    [TestMethod]
+    public async Task Csv_export_neutralizes_formula_like_audit_evidence()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(partialNotes: "=1+1");
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?handler=Csv" +
+            $"&organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var csv = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(
+            csv,
+            "TEST-2,Test control 2,Partial,10,'=1+1");
+    }
+
+    [TestMethod]
+    public async Task Print_report_renders_audit_handoff_content_and_gap_continuation()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(additionalGapCount: 55);
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/Dashboard/Report?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&baselineProfileId={setup.ProfileId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}");
+        request.Headers.Add("X-Correlation-ID", "report-correlation-23");
+
+        using var response = await client.SendAsync(request);
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var report = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Contains(report, "Audit handoff report");
+        StringAssert.Contains(report, "Contoso");
+        StringAssert.Contains(report, "Test Framework 1.0 - Current review");
+        StringAssert.Contains(report, "Generated 2026-08-13 08:00:00 UTC");
+        StringAssert.Contains(report, "Correlation ID: report-correlation-23");
+        StringAssert.Contains(report, "Framework summary");
+        StringAssert.Contains(report, "id=\"report-radar-chart\"");
+        StringAssert.Contains(report, "class=\"radar-series target\"");
+        StringAssert.Contains(report, "Survey transformation summary");
+        StringAssert.Contains(report, "75% profile score");
+        StringAssert.Contains(report, "+25 points vs previous");
+        StringAssert.Contains(report, "id=\"report-survey-trend\"");
+        StringAssert.Contains(report, "Gap details");
+        StringAssert.Contains(report, "EXTRA-001");
+        StringAssert.Contains(report, "7 additional gaps are available in the CSV export.");
+        StringAssert.Contains(report, "window.print()");
+        StringAssert.Contains(report, "@media print");
+    }
+
     private sealed class DashboardApplication(
         string databasePath,
         WebApplicationFactory<Program> factory) : IAsyncDisposable
@@ -192,7 +347,9 @@ public sealed class DashboardUiTests
         public HttpClient CreateClient(WebApplicationFactoryClientOptions options) =>
             factory.CreateClient(options);
 
-        public async Task<DashboardSetup> SeedAsync()
+        public async Task<DashboardSetup> SeedAsync(
+            int additionalGapCount = 0,
+            string partialNotes = "Note 2")
         {
             await using var scope = factory.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<BPRadarDbContext>();
@@ -243,7 +400,9 @@ public sealed class DashboardUiTests
                     Control = control,
                     Status = statuses[index],
                     Score = index * 10m,
-                    Notes = $"Note {index + 1}",
+                    Notes = statuses[index] == ComplianceStatus.Partial
+                        ? partialNotes
+                        : $"Note {index + 1}",
                     Source = ResultSource.Manual,
                     UpdatedAt = now
                 });
@@ -251,6 +410,27 @@ public sealed class DashboardUiTests
                 {
                     partialControl = control;
                 }
+            }
+
+            for (var index = 0; index < additionalGapCount; index++)
+            {
+                var control = new Control
+                {
+                    Code = $"EXTRA-{index + 1:000}",
+                    Title = $"Additional gap {index + 1}",
+                    Description = $"Additional description {index + 1}",
+                    SortOrder = statuses.Length + index + 1
+                };
+                domain.Controls.Add(control);
+                assessment.Results.Add(new AssessmentResult
+                {
+                    Control = control,
+                    Status = ComplianceStatus.NonCompliant,
+                    Score = 0m,
+                    Notes = $"Additional note {index + 1}",
+                    Source = ResultSource.Manual,
+                    UpdatedAt = now
+                });
             }
 
             var profile = new BaselineProfile
@@ -341,6 +521,7 @@ public sealed class DashboardUiTests
                 partialControl!.Id,
                 surveyTemplate.Id,
                 framework.Id,
+                domain.Id,
                 untargetedAssessment.Id,
                 untargetedFramework.Id);
         }
@@ -359,6 +540,7 @@ public sealed class DashboardUiTests
         int PartialControlId,
         int SurveyTemplateId,
         int TargetedFrameworkId,
+        int DomainId,
         int UntargetedAssessmentId,
         int UntargetedFrameworkId);
 

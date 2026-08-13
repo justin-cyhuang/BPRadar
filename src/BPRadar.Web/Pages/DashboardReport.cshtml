@@ -1,0 +1,266 @@
+@page "/Dashboard/Report"
+@model BPRadar.Web.Pages.DashboardReportModel
+@using BPRadar.Web.Data
+@using BPRadar.Web.Features.Dashboard
+@using BPRadar.Web.Features.Surveys
+@using Microsoft.AspNetCore.Html
+@using System.Globalization
+@using static BPRadar.Web.Features.Dashboard.ChartSvgGeometry
+@{
+    ViewData["Title"] = "Audit handoff report";
+    Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
+    var dashboard = Model.Dashboard;
+    var radarColors = new[] { "#0969da", "#8250df", "#1a7f37", "#bf8700", "#cf222e" };
+}
+
+<style>
+    .report-header { border-bottom: 2px solid #24292f; margin-bottom: 1.5rem; padding-bottom: 1rem; }
+    .report-metadata { color: #57606a; }
+    .report-actions { display: flex; gap: .75rem; margin: 1rem 0; }
+    .report-footer { border-top: 1px solid #d0d7de; color: #57606a; font-size: .8rem; margin-top: 2rem; padding-top: .75rem; }
+    .continuation-note { background: #fff8c5; border: 1px solid #d4a72c; padding: .75rem; }
+    @@media print {
+        @@page { margin: 15mm; size: auto; }
+        body { color: black; margin: 0; max-width: none; padding: 0; }
+        .app-nav, .report-actions { display: none !important; }
+        .overview-card, .chart-container, .survey-summary article { break-inside: avoid; }
+        table { break-inside: auto; font-size: 9pt; }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; }
+        .report-footer { bottom: 0; }
+    }
+</style>
+
+<main>
+    <header class="report-header">
+        <h1>Audit handoff report</h1>
+        <p><strong>Organization:</strong> @Model.OrganizationName</p>
+        <p>
+            <strong>Selected assessments:</strong>
+            @string.Join(
+                "; ",
+                dashboard.AssessmentOptions
+                    .Where(option => dashboard.SelectedAssessmentIds.Contains(option.Id))
+                    .Select(option =>
+                        $"{option.FrameworkName} {option.FrameworkVersion} - {option.Label}"))
+        </p>
+        <p class="report-metadata">
+            Generated @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+            · Correlation ID: @Model.CorrelationId
+        </p>
+    </header>
+
+    <div class="report-actions">
+        <button type="button" onclick="window.print()">Print / Save as PDF</button>
+        <a class="button" href="/Dashboard">Back to dashboard</a>
+    </div>
+
+    <section aria-labelledby="summary-heading">
+        <h2 id="summary-heading">Framework summary</h2>
+        <div class="overview-grid">
+            @foreach (var overview in dashboard.Overviews)
+            {
+                <article class="overview-card">
+                    <h3>@overview.FrameworkName @overview.FrameworkVersion</h3>
+                    <p>@overview.AssessmentLabel</p>
+                    <dl>
+                        <div><dt>Completion</dt><dd>@overview.CompletionPercent.ToString("0.#")%</dd></div>
+                        <div><dt>Compliance</dt><dd>@overview.CompliancePercent.ToString("0.#")%</dd></div>
+                        <div><dt>Gaps</dt><dd>@overview.GapCount</dd></div>
+                        @if (overview.TargetCompliancePercent is not null)
+                        {
+                            <div><dt>Target</dt><dd>@overview.TargetCompliancePercent.Value.ToString("0.#")%</dd></div>
+                            <div><dt>Delta</dt><dd>@overview.TargetDelta!.Value.ToString("+0.#;-0.#;0")%</dd></div>
+                        }
+                    </dl>
+                </article>
+            }
+        </div>
+    </section>
+
+    <section aria-labelledby="radar-heading">
+        <h2 id="radar-heading">Cross-framework radar snapshot</h2>
+        @if (dashboard.Radar.Axes.Length > 0)
+        {
+            <div class="chart-container">
+                <svg
+                    id="report-radar-chart"
+                    class="radar-chart"
+                    viewBox="0 0 600 500"
+                    role="img"
+                    aria-label="Selected assessment framework scores">
+                    @foreach (var level in dashboard.Radar.GridLevels)
+                    {
+                        <polygon class="radar-grid" points="@RadarGridPoints(dashboard.Radar.Axes.Length, level)" />
+                    }
+                    @for (var index = 0; index < dashboard.Radar.Axes.Length; index++)
+                    {
+                        <line
+                            class="radar-axis"
+                            x1="300"
+                            y1="220"
+                            x2="@RadarCoordinate(index, dashboard.Radar.Axes.Length, 160, true)"
+                            y2="@RadarCoordinate(index, dashboard.Radar.Axes.Length, 160, false)" />
+                        @SvgText(
+                            "radar-axis-label",
+                            RadarCoordinate(index, dashboard.Radar.Axes.Length, 190, true),
+                            RadarCoordinate(index, dashboard.Radar.Axes.Length, 190, false),
+                            dashboard.Radar.Axes[index].Label,
+                            RadarTextAnchor(index, dashboard.Radar.Axes.Length))
+                    }
+                    @for (var index = 0; index < dashboard.Radar.Series.Length; index++)
+                    {
+                        var series = dashboard.Radar.Series[index];
+                        <polygon
+                            class="radar-series"
+                            points="@RadarSeriesPoints(series.Values)"
+                            style="--series-color: @radarColors[index % radarColors.Length]" />
+                    }
+                    @if (dashboard.Radar.TargetSeries is not null)
+                    {
+                        var targets = dashboard.Radar.TargetSeries.Values;
+                        @if (targets.All(value => value is not null))
+                        {
+                            <polygon class="radar-series target" points="@RadarSeriesPoints(targets)" />
+                        }
+                        else
+                        {
+                            @for (var index = 0; index < targets.Length; index++)
+                            {
+                                if (targets[index] is decimal target)
+                                {
+                                    <circle
+                                        class="radar-target-point"
+                                        cx="@RadarValueCoordinate(index, targets.Length, target, true)"
+                                        cy="@RadarValueCoordinate(index, targets.Length, target, false)"
+                                        r="6" />
+                                }
+                            }
+                        }
+                    }
+                </svg>
+                <ul class="chart-legend">
+                    @for (var index = 0; index < dashboard.Radar.Series.Length; index++)
+                    {
+                        <li>
+                            <span
+                                class="legend-swatch"
+                                style="--series-color: @radarColors[index % radarColors.Length]"></span>
+                            @dashboard.Radar.Series[index].Label
+                        </li>
+                    }
+                    @if (dashboard.Radar.TargetSeries is not null)
+                    {
+                        <li><span class="legend-swatch target"></span>Target</li>
+                    }
+                </ul>
+            </div>
+        }
+    </section>
+
+    <section aria-labelledby="survey-heading">
+        <h2 id="survey-heading">Survey transformation summary</h2>
+        @if (dashboard.SurveyTracking is null)
+        {
+            <p>No survey template is selected.</p>
+        }
+        else
+        {
+            var tracking = dashboard.SurveyTracking;
+            <h3>@tracking.SurveyTemplateName</h3>
+            <div class="survey-summary">
+                <article>
+                    <h4>Latest profile</h4>
+                    <strong>@(tracking.LatestScore is null ? "No scored submissions" : $"{tracking.LatestScore:0.#}% profile score")</strong>
+                </article>
+                <article>
+                    <h4>Change</h4>
+                    <strong>@(tracking.LatestDelta is null ? "No previous score" : $"{tracking.LatestDelta:+0.#;-0.#;0} points vs previous")</strong>
+                </article>
+                <article>
+                    <h4>Cadence</h4>
+                    <strong>@(tracking.CadenceStatus == SurveyDueStatus.Overdue ? "Overdue" : "On time")</strong>
+                </article>
+            </div>
+            @if (tracking.Trend.Length > 0)
+            {
+                <div class="chart-container">
+                    <svg
+                        id="report-survey-trend"
+                        class="trend-chart"
+                        viewBox="0 0 600 240"
+                        role="img"
+                        aria-label="Survey profile score trend">
+                        @if (tracking.Trend.Length > 1)
+                        {
+                            <polyline class="trend-line" points="@TrendPoints(tracking.Trend)" />
+                        }
+                        @for (var index = 0; index < tracking.Trend.Length; index++)
+                        {
+                            <circle
+                                class="trend-point"
+                                cx="@TrendX(index, tracking.Trend.Length)"
+                                cy="@TrendY(tracking.Trend[index].Score)"
+                                r="5" />
+                        }
+                    </svg>
+                </div>
+            }
+        }
+    </section>
+
+    <section aria-labelledby="gaps-heading">
+        <h2 id="gaps-heading">Gap details</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Framework</th>
+                    <th>Domain</th>
+                    <th>Control</th>
+                    <th>Title</th>
+                    <th>Status</th>
+                    <th>Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var gap in Model.PrintedGaps)
+                {
+                    <tr>
+                        <td>@gap.FrameworkName @gap.FrameworkVersion</td>
+                        <td>@gap.DomainCode - @gap.DomainName</td>
+                        <td>@gap.ControlCode</td>
+                        <td>@gap.Title</td>
+                        <td>@(gap.Status == ComplianceStatus.NonCompliant ? "Non-Compliant" : "Partial")</td>
+                        <td>@gap.Notes</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        @if (Model.OmittedGapCount > 0)
+        {
+            <p class="continuation-note">
+                @Model.OmittedGapCount additional gaps are available in the CSV export.
+            </p>
+        }
+    </section>
+
+    <footer class="report-footer">
+        BPRadar audit handoff · Generated @Model.GeneratedAtUtc.ToString("O")
+        · Correlation ID: @Model.CorrelationId
+    </footer>
+</main>
+
+@functions {
+    private static IHtmlContent SvgText(
+        string cssClass,
+        string x,
+        string y,
+        string value,
+        string textAnchor)
+    {
+        return new HtmlString(
+            $"<text class=\"{cssClass}\" x=\"{x}\" y=\"{y}\" " +
+            $"text-anchor=\"{textAnchor}\">" +
+            $"{System.Net.WebUtility.HtmlEncode(value)}</text>");
+    }
+}
