@@ -1,0 +1,76 @@
+@model BPRadar.Web.Features.Dashboard.SurveyTrendChartModel
+@using Microsoft.AspNetCore.Html
+@using System.Globalization
+@using static BPRadar.Web.Features.Dashboard.ChartSvgGeometry
+
+<h3>Self-Reported State trend</h3>
+<svg
+    id="@Model.Id"
+    class="trend-chart"
+    viewBox="0 0 600 240"
+    role="img"
+    aria-labelledby="@(Model.Id)-title @(Model.Id)-description">
+    <title id="@(Model.Id)-title">Survey Self-Reported State trend</title>
+    <desc id="@(Model.Id)-description">
+        Survey-derived Self-Reported State scores by snapshot date on a 0 to 100 scale.
+    </desc>
+    @foreach (var level in TrendScaleLevels)
+    {
+        <line
+            class="trend-grid"
+            x1="60"
+            y1="@TrendY(level)"
+            x2="560"
+            y2="@TrendY(level)" />
+        @SvgText(
+            "trend-label",
+            "52",
+            (TrendY(level) + 4).ToString("0.##", CultureInfo.InvariantCulture),
+            $"{level}%",
+            "end")
+    }
+    @if (Model.Points.Count > 1)
+    {
+        <polyline class="trend-line" points="@TrendPoints(Model.Points)" />
+    }
+    @for (var index = 0; index < Model.Points.Count; index++)
+    {
+        var point = Model.Points[index];
+        var x = TrendX(index, Model.Points.Count);
+        <circle
+            class="trend-point"
+            data-score="@point.Score.ToString("0.##", CultureInfo.InvariantCulture)"
+            cx="@x"
+            cy="@TrendY(point.Score)"
+            r="5">
+            <title>@TrendPointDescription(point)</title>
+        </circle>
+        @SvgText(
+            "trend-score-label",
+            x,
+            (TrendY(point.Score) - 9).ToString("0.##", CultureInfo.InvariantCulture),
+            $"{point.Score:0.#}%",
+            TrendTextAnchor(index, Model.Points.Count))
+        @SvgText(
+            "trend-date-label",
+            x,
+            "225",
+            TrendDateLabel(point),
+            TrendTextAnchor(index, Model.Points.Count))
+    }
+</svg>
+
+@functions {
+    private static IHtmlContent SvgText(
+        string cssClass,
+        string x,
+        string y,
+        string value,
+        string textAnchor)
+    {
+        return new HtmlString(
+            $"<text class=\"{cssClass}\" x=\"{x}\" y=\"{y}\" " +
+            $"text-anchor=\"{textAnchor}\">" +
+            $"{System.Net.WebUtility.HtmlEncode(value)}</text>");
+    }
+}

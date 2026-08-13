@@ -170,12 +170,12 @@
             <h3>@tracking.SurveyTemplateName</h3>
             <div class="survey-summary">
                 <article>
-                    <h4>Latest profile</h4>
-                    <strong>@(tracking.LatestScore is null ? "No scored submissions" : $"{tracking.LatestScore:0.#}% profile score")</strong>
+                    <h4>Latest Self-Reported State</h4>
+                    <strong>@(tracking.LatestScore is null ? "No scored submissions" : $"{tracking.LatestScore:0.#}% survey score")</strong>
                 </article>
                 <article>
-                    <h4>Change</h4>
-                    <strong>@(tracking.LatestDelta is null ? "No previous score" : $"{tracking.LatestDelta:+0.#;-0.#;0} points vs previous")</strong>
+                    <h4>Self-Reported State change</h4>
+                    <strong>@(tracking.LatestDelta is null ? "No previous survey score" : $"{tracking.LatestDelta:+0.#;-0.#;0} points vs previous survey")</strong>
                 </article>
                 <article>
                     <h4>Cadence</h4>
@@ -185,25 +185,11 @@
             @if (tracking.Trend.Length > 0)
             {
                 <div class="chart-container">
-                    <svg
-                        id="report-survey-trend"
-                        class="trend-chart"
-                        viewBox="0 0 600 240"
-                        role="img"
-                        aria-label="Survey profile score trend">
-                        @if (tracking.Trend.Length > 1)
-                        {
-                            <polyline class="trend-line" points="@TrendPoints(tracking.Trend)" />
-                        }
-                        @for (var index = 0; index < tracking.Trend.Length; index++)
-                        {
-                            <circle
-                                class="trend-point"
-                                cx="@TrendX(index, tracking.Trend.Length)"
-                                cy="@TrendY(tracking.Trend[index].Score)"
-                                r="5" />
-                        }
-                    </svg>
+                    @await Html.PartialAsync(
+                        "_SurveyTrendChart",
+                        new SurveyTrendChartModel(
+                            "report-survey-trend",
+                            tracking.Trend))
                 </div>
             }
         }
