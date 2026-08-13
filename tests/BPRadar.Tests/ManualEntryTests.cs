@@ -82,6 +82,53 @@ public sealed class ManualEntryTests
     }
 
     [TestMethod]
+    public async Task Upsert_rejects_a_control_from_a_different_framework()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var (assessment, _) = await database.CreateAssessmentAsync();
+        var otherFramework = new Framework
+        {
+            Name = $"Other framework {Guid.NewGuid():N}",
+            Version = "1.0",
+            Description = "Out-of-scope framework"
+        };
+        var otherDomain = new Domain
+        {
+            Code = "OTHER",
+            Name = "Other domain",
+            SortOrder = 1
+        };
+        var otherControl = new Control
+        {
+            Code = "OTHER-1",
+            Title = "Other control",
+            Description = "A control from another framework",
+            SortOrder = 1
+        };
+        otherDomain.Controls.Add(otherControl);
+        otherFramework.Domains.Add(otherDomain);
+        database.Context.Frameworks.Add(otherFramework);
+        await database.Context.SaveChangesAsync();
+
+        var outcome = await ManualEntryService.UpsertAsync(
+            database.Context,
+            TimeProvider.System,
+            assessment.Id,
+            otherControl.Id,
+            new SaveAssessmentResultRequest(
+                "Compliant",
+                100m,
+                null,
+                null));
+
+        Assert.IsNull(outcome.Result);
+        Assert.IsNull(outcome.Errors);
+        Assert.IsNotNull(outcome.NotFoundMessage);
+        StringAssert.Contains(outcome.NotFoundMessage, "is not part of assessment");
+        Assert.IsEmpty(await database.Context.AssessmentResults.ToArrayAsync());
+    }
+
+    [TestMethod]
     public void Progress_excludes_not_assessed_and_counts_all_other_statuses()
     {
         var progress = ManualEntryService.CalculateProgress(
