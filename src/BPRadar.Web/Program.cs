@@ -1,6 +1,7 @@
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.IssueMatching;
+using BPRadar.Web.Features.Issues;
 using BPRadar.Web.Features.Surveys;
 using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
@@ -35,6 +36,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 
 app.MapRazorPages();
 app.MapSurveyEndpoints();
+app.MapIssueEndpoints();
 app.MapPost(
     "/api/issue-matching/candidates",
     IssueMatchingEndpoint.MatchCandidatesAsync);

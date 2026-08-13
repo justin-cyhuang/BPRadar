@@ -3,6 +3,7 @@ using System;
 using BPRadar.Web.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BPRadar.Web.Data.Migrations
 {
     [DbContext(typeof(BPRadarDbContext))]
-    partial class BPRadarDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813015242_IssueLifecycle")]
+    partial class IssueLifecycle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
