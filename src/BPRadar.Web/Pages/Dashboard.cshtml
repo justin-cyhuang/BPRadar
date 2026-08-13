@@ -84,8 +84,25 @@
                     }
                 </select>
             </label>
+            <label class="checkbox-label">
+                <input
+                    type="checkbox"
+                    name="IncludeSurveyDomainDeltas"
+                    value="true"
+                    checked="@Model.IncludeSurveyDomainDeltas" />
+                <span>Include survey domain deltas in CSV</span>
+            </label>
             <button type="submit">Apply scope</button>
         </form>
+
+        <section aria-labelledby="exports-heading">
+            <h2 id="exports-heading">Audit handoff</h2>
+            <p>
+                Exports use the current assessment scope and gap filters.
+            </p>
+            <a class="button" href="@ExportUrl(report: false)">Export CSV</a>
+            <a class="button" href="@ExportUrl(report: true)">Print / Save as PDF</a>
+        </section>
 
         <section aria-labelledby="overview-heading">
             <h2 id="overview-heading">Overview</h2>
@@ -452,6 +469,10 @@
                     type="hidden"
                     name="SurveyTemplateId"
                     value="@dashboard.SelectedSurveyTemplateId" />
+                <input
+                    type="hidden"
+                    name="IncludeSurveyDomainDeltas"
+                    value="@Model.IncludeSurveyDomainDeltas.ToString().ToLowerInvariant()" />
 
                 <label>
                     Framework
@@ -586,6 +607,42 @@
     private const double RadarCenterX = 300;
     private const double RadarCenterY = 220;
     private const double RadarRadius = 160;
+
+    private string ExportUrl(bool report)
+    {
+        var dashboard = Model.Dashboard!;
+        var parameters = new List<KeyValuePair<string, string?>>
+        {
+            new("OrganizationId", Model.OrganizationId?.ToString(CultureInfo.InvariantCulture)),
+            new(
+                "BaselineProfileId",
+                dashboard.SelectedBaselineProfileId?.ToString(CultureInfo.InvariantCulture) ??
+                string.Empty),
+            new(
+                "SurveyTemplateId",
+                dashboard.SelectedSurveyTemplateId?.ToString(CultureInfo.InvariantCulture)),
+            new("FrameworkId", Model.FrameworkId?.ToString(CultureInfo.InvariantCulture)),
+            new("DomainId", Model.DomainId?.ToString(CultureInfo.InvariantCulture)),
+            new("GapStatus", Model.GapStatus?.ToString()),
+            new("Sort", Model.Sort.ToString()),
+            new("SortDescending", Model.SortDescending.ToString().ToLowerInvariant())
+        };
+        parameters.AddRange(
+            dashboard.SelectedAssessmentIds.Select(id =>
+                new KeyValuePair<string, string?>(
+                    "AssessmentIds",
+                    id.ToString(CultureInfo.InvariantCulture))));
+        if (!report)
+        {
+            parameters.Add(new("handler", "Csv"));
+            parameters.Add(new(
+                "IncludeSurveyDomainDeltas",
+                Model.IncludeSurveyDomainDeltas.ToString().ToLowerInvariant()));
+        }
+
+        var path = report ? "/Dashboard/Report" : "/Dashboard";
+        return path + QueryString.Create(parameters);
+    }
 
     private static string RadarGridPoints(int axisCount, decimal level) =>
         RadarSeriesPoints(

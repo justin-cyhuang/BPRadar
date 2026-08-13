@@ -1,5 +1,8 @@
+using System.Diagnostics;
 using BPRadar.Web.Data;
+using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.Dashboard;
+using BPRadar.Web.Features.Reporting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -37,11 +40,56 @@ public sealed class DashboardModel(
     [BindProperty(SupportsGet = true)]
     public bool SortDescending { get; set; }
 
+    [BindProperty(SupportsGet = true)]
+    public bool IncludeSurveyDomainDeltas { get; set; }
+
     public DashboardOrganizationOption[] Organizations { get; private set; } = [];
 
     public DashboardView? Dashboard { get; private set; }
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
+    {
+        await LoadDashboardAsync(cancellationToken);
+    }
+
+    public async Task<IActionResult> OnGetCsvAsync(
+        CancellationToken cancellationToken)
+    {
+        var timer = Stopwatch.StartNew();
+        BPRadarTrace.Write(
+            TraceEventType.Start,
+            "Reporting",
+            "CsvExportStarted",
+            $"organizationId={OrganizationId?.ToString() ?? "default"}");
+        await LoadDashboardAsync(cancellationToken);
+        if (Dashboard is null || OrganizationId is null)
+        {
+            return NotFound();
+        }
+
+        var organizationName = Organizations
+            .Single(organization => organization.Id == OrganizationId)
+            .Name;
+        var exportedAtUtc = timeProvider.GetUtcNow().UtcDateTime;
+        var content = DashboardCsvExporter.Export(
+            Dashboard,
+            organizationName,
+            exportedAtUtc,
+            BPRadarTrace.CorrelationId ?? HttpContext.TraceIdentifier,
+            IncludeSurveyDomainDeltas);
+        var fileName =
+            $"bpradar-audit-{exportedAtUtc:yyyyMMdd-HHmmss}.csv";
+        BPRadarTrace.Write(
+            TraceEventType.Stop,
+            "Reporting",
+            "CsvExportCompleted",
+            $"organizationId={OrganizationId} assessments={Dashboard.SelectedAssessmentIds.Length} " +
+            $"gaps={Dashboard.Gaps.Length} bytes={content.Length}",
+            timer.ElapsedMilliseconds);
+        return File(content, "text/csv; charset=utf-8", fileName);
+    }
+
+    private async Task LoadDashboardAsync(CancellationToken cancellationToken)
     {
         Organizations = await dbContext.Organizations
             .AsNoTracking()
