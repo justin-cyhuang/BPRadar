@@ -65,7 +65,12 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "name=\"GapStatus\"");
         StringAssert.Contains(page, "Export CSV");
         StringAssert.Contains(page, "Print / Save as PDF");
-        StringAssert.Contains(page, "handler=Csv");
+        StringAssert.Contains(page, "id=\"csv-export\"");
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "name=\"handler\"\\s+value=\"Csv\"",
+                RegexOptions.CultureInvariant));
         StringAssert.Contains(page, "/Dashboard/Report?");
         StringAssert.Contains(page, "TEST-2");
         StringAssert.Contains(page, "TEST-3");
@@ -222,6 +227,93 @@ public sealed class DashboardUiTests
         StringAssert.Contains(csv, "Survey Domain Deltas");
         StringAssert.Contains(csv, "Domain,Previous Score,Latest Score,Delta");
         StringAssert.Contains(csv, "TEST - Test Domain,50,75,25");
+    }
+
+    [TestMethod]
+    public async Task Csv_export_form_submits_current_scope_with_requested_survey_domain_deltas()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(additionalGapCount: 1);
+        using var pageResponse = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&assessmentIds={setup.UntargetedAssessmentId}" +
+            "&baselineProfileId=" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&gapStatus=NonCompliant&sort=Title&sortDescending=true");
+        var page = await pageResponse.Content.ReadAsStringAsync();
+
+        using var exportResponse = await SubmitGetFormAsync(
+            client,
+            page,
+            "csv-export",
+            "IncludeSurveyDomainDeltas");
+
+        Assert.AreEqual(HttpStatusCode.OK, exportResponse.StatusCode);
+        var csv = await exportResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "Test Framework 1.0 - Current review");
+        StringAssert.Contains(csv, "Untargeted Framework 1.0 - Untargeted review");
+        StringAssert.Contains(csv, "Q3 pulse");
+        StringAssert.Contains(csv, "Survey Domain Deltas");
+        StringAssert.Contains(csv, "TEST - Test Domain,50,75,25");
+        Assert.IsFalse(csv.Contains("TEST-2", StringComparison.Ordinal));
+        Assert.IsFalse(csv.Contains(",80,-46.67,", StringComparison.Ordinal));
+        Assert.IsLessThan(
+            csv.IndexOf("EXTRA-001", StringComparison.Ordinal),
+            csv.IndexOf("TEST-3", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Csv_export_form_omits_survey_domain_deltas_when_option_is_cleared()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+        using var pageResponse = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&includeSurveyDomainDeltas=true");
+        var page = await pageResponse.Content.ReadAsStringAsync();
+
+        using var exportResponse = await SubmitGetFormAsync(
+            client,
+            page,
+            "csv-export");
+
+        Assert.AreEqual(HttpStatusCode.OK, exportResponse.StatusCode);
+        var csv = await exportResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "Q3 pulse");
+        Assert.IsFalse(
+            csv.Contains("Survey Domain Deltas", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Csv_export_form_disables_domain_deltas_without_a_survey_template()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            "&surveyTemplateId=");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "name=\"IncludeSurveyDomainDeltas\"[^>]*disabled=\"disabled\"",
+                RegexOptions.CultureInvariant));
+        StringAssert.Contains(
+            page,
+            "Select a Survey Template to include survey domain deltas.");
     }
 
     [TestMethod]
@@ -691,6 +783,57 @@ public sealed class DashboardUiTests
         int DomainId,
         int UntargetedAssessmentId,
         int UntargetedFrameworkId);
+
+    private static async Task<HttpResponseMessage> SubmitGetFormAsync(
+        HttpClient client,
+        string page,
+        string formId,
+        params string[] checkedInputs)
+    {
+        var form = Regex.Match(
+            page,
+            $"""<form[^>]*id="{Regex.Escape(formId)}"[^>]*>(?<content>.*?)</form>""",
+            RegexOptions.CultureInvariant | RegexOptions.Singleline);
+        Assert.IsTrue(form.Success, $"Expected rendered form '{formId}'.");
+        var action = WebUtility.HtmlDecode(
+            Regex.Match(
+                form.Value,
+                "action=\"(?<value>[^\"]*)\"",
+                RegexOptions.CultureInvariant).Groups["value"].Value);
+        var selected = checkedInputs.ToHashSet(StringComparer.Ordinal);
+        var values = Regex.Matches(
+                form.Groups["content"].Value,
+                "<input[^>]*>",
+                RegexOptions.CultureInvariant)
+            .Select(match => match.Value)
+            .Where(input =>
+                !input.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+            .Select(input => new
+            {
+                Name = Attribute(input, "name"),
+                Value = Attribute(input, "value"),
+                Type = Attribute(input, "type")
+            })
+            .Where(input =>
+                input.Name.Length > 0 &&
+                (!input.Type.Equals("checkbox", StringComparison.OrdinalIgnoreCase) ||
+                 selected.Contains(input.Name)))
+            .Select(input => new KeyValuePair<string, string>(
+                input.Name,
+                WebUtility.HtmlDecode(input.Value)))
+            .ToArray();
+        using var content = new FormUrlEncodedContent(values);
+        var query = await content.ReadAsStringAsync();
+        return await client.GetAsync($"{action}?{query}");
+    }
+
+    private static string Attribute(string element, string name) =>
+        Regex.Match(
+            element,
+            $"\\b{Regex.Escape(name)}=\"(?<value>[^\"]*)\"",
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)
+            .Groups["value"]
+            .Value;
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
