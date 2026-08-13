@@ -73,6 +73,7 @@ public sealed class AssessmentImportService(
         var indexes = ResolveIndexes(batch.Table.Headers, mapping);
         var rows = new List<ImportPreviewRow>();
         var errors = new List<ImportValidationError>();
+        var seenControlIds = new HashSet<int>();
 
         foreach (var sourceRow in batch.Table.Rows)
         {
@@ -83,6 +84,19 @@ public sealed class AssessmentImportService(
                 controlsByCode,
                 existingControlIds,
                 out var previewRow);
+            var controlCode = GetMappedValue(
+                sourceRow,
+                indexes,
+                "ControlCode");
+            if (controlsByCode.TryGetValue(controlCode, out var control) &&
+                !seenControlIds.Add(control.Id))
+            {
+                rowErrors.Add(new ImportValidationError(
+                    sourceRow.RowNumber,
+                    "DuplicateControlCode",
+                    $"ControlCode '{control.Code}' appears more than once in the import file."));
+            }
+
             errors.AddRange(rowErrors);
             if (rowErrors.Count == 0)
             {
@@ -151,6 +165,16 @@ public sealed class AssessmentImportService(
 
             foreach (var row in preview.Rows)
             {
+                if (!upsertedControlIds.Add(row.ControlId))
+                {
+                    WriteTrace(
+                        TraceEventType.Warning,
+                        "ImportRowInvalid",
+                        batch,
+                        $"row={row.RowNumber} reason=DuplicateControlCode");
+                    continue;
+                }
+
                 if (!existingByControl.TryGetValue(row.ControlId, out var result))
                 {
                     result = new AssessmentResult
@@ -169,7 +193,6 @@ public sealed class AssessmentImportService(
                 result.ExternalRecordId = EmptyToNull(row.ExternalRecordId);
                 result.Source = ResultSource.Import;
                 result.UpdatedAt = now;
-                upsertedControlIds.Add(row.ControlId);
             }
 
             assessment.UpdatedAt = now;
@@ -457,6 +480,16 @@ public sealed class AssessmentImportService(
                         ?.index ?? -1;
             },
             StringComparer.Ordinal);
+
+    private static string GetMappedValue(
+        ImportTableRow row,
+        IReadOnlyDictionary<string, int> indexes,
+        string column) =>
+        indexes.TryGetValue(column, out var index) &&
+        index >= 0 &&
+        index < row.Values.Count
+            ? row.Values[index].Trim()
+            : string.Empty;
 
     private static bool IsKnownScale(string value) =>
         value.Equals("0-100", StringComparison.OrdinalIgnoreCase) ||

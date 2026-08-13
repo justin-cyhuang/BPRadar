@@ -157,6 +157,42 @@ public sealed class AssessmentImportTests
     }
 
     [TestMethod]
+    public async Task Duplicate_control_code_is_rejected_and_does_not_overwrite_first_row()
+    {
+        await using var database = await ImportTestDatabase.CreateAsync();
+        var assessment = await database.CreateAssessmentAsync(
+            "Azure Well-Architected Framework",
+            "Partial Review",
+            DateTime.UtcNow.Date);
+        var today = DateTime.UtcNow.ToString("yyyy-MM-dd");
+        var csv = FullHeader + "\n" +
+            Row("RE:01", "RE", "Compliant", "90", "0-100", today) + "\n" +
+            Row("RE:01", "RE", "NonCompliant", "10", "0-100", today);
+        var batch = CreateBatch(assessment.Id, "partial.csv", csv);
+
+        var preview = await database.Service.PreviewAsync(
+            batch,
+            batch.SuggestedMapping);
+        batch = batch with { Preview = preview };
+        var result = await database.Service.CommitAsync(batch);
+
+        Assert.AreEqual(1, preview.ValidRows);
+        Assert.AreEqual(1, preview.InvalidRows);
+        Assert.AreEqual(1, preview.RowsToUpdate);
+        Assert.AreEqual(
+            "DuplicateControlCode",
+            preview.Errors.Single().ReasonCode);
+        Assert.AreEqual(3, preview.Errors.Single().RowNumber);
+        Assert.AreEqual(1, result.UpsertedRows);
+        var imported = await database.Context.AssessmentResults
+            .SingleAsync(item =>
+                item.AssessmentId == assessment.Id &&
+                item.Control.Code == "RE:01");
+        Assert.AreEqual(ComplianceStatus.Compliant, imported.Status);
+        Assert.AreEqual(90m, imported.Score);
+    }
+
+    [TestMethod]
     [DataRow(
         "waf-import-sample.csv",
         "Azure Well-Architected Framework",
