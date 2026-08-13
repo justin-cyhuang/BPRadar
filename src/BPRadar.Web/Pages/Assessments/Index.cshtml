@@ -37,7 +37,7 @@
                     <tr>
                         <td>@assessment.OrganizationName</td>
                         <td>@assessment.FrameworkName @assessment.FrameworkVersion</td>
-                        <td>@assessment.Label</td>
+                        <td><a href="/Assessments/@assessment.Id">@assessment.Label</a></td>
                         <td>@assessment.SnapshotDate.ToString("yyyy-MM-dd")</td>
                         <td>@assessment.CompletionPercent.ToString("0.#")%</td>
                     </tr>

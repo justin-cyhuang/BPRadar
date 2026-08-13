@@ -1,0 +1,179 @@
+@page "/Assessments/{assessmentId:int}"
+@model BPRadar.Web.Pages.Assessments.ChecklistModel
+@using BPRadar.Web.Data
+@using System.Globalization
+@{
+    ViewData["Title"] = Model.Checklist.Label;
+    Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
+}
+
+<main>
+    <p><a href="/Assessments">Back to assessments</a></p>
+    <h1>@Model.Checklist.Label</h1>
+    <p>@Model.Checklist.OrganizationName · @Model.Checklist.FrameworkName @Model.Checklist.FrameworkVersion</p>
+    <p class="overall-progress">
+        Overall progress:
+        <strong id="overall-progress">@Model.Checklist.Progress.Assessed/@Model.Checklist.Progress.Total assessed</strong>
+    </p>
+
+    @foreach (var domain in Model.Checklist.Domains)
+    {
+        <details class="domain" open>
+            <summary>
+                <span>@domain.Code — @domain.Name</span>
+                <strong id="domain-progress-@domain.Id">@domain.Progress.Assessed/@domain.Progress.Total assessed</strong>
+            </summary>
+            <div class="control-list">
+                @foreach (var control in domain.Controls)
+                {
+                    <article class="control-row" data-control-id="@control.Id" data-domain-id="@domain.Id">
+                        <header>
+                            <div>
+                                <span class="control-code">@control.Code</span>
+                                <h2>@control.Title</h2>
+                            </div>
+                            <span class="save-state" role="status" aria-live="polite">Saved</span>
+                        </header>
+
+                        <details class="description">
+                            <summary>Description</summary>
+                            <p>@control.Description</p>
+                        </details>
+
+                        <div class="control-fields">
+                            <label>
+                                Status
+                                <select class="status" aria-label="Status for @control.Code">
+                                    <option value="NotAssessed" selected="@(control.Status == ComplianceStatus.NotAssessed)">Not Assessed</option>
+                                    <option value="Compliant" selected="@(control.Status == ComplianceStatus.Compliant)">Compliant</option>
+                                    <option value="Partial" selected="@(control.Status == ComplianceStatus.Partial)">Partial</option>
+                                    <option value="NonCompliant" selected="@(control.Status == ComplianceStatus.NonCompliant)">Non-Compliant</option>
+                                    <option value="NotApplicable" selected="@(control.Status == ComplianceStatus.NotApplicable)">N/A</option>
+                                </select>
+                            </label>
+
+                            @if (domain.UsesNumericScoring)
+                            {
+                                <label>
+                                    Score
+                                    <input
+                                        class="score"
+                                        type="number"
+                                        min="@domain.MinimumScore"
+                                        max="@domain.MaximumScore"
+                                        step="0.01"
+                                        value="@(control.Score?.ToString("0.##", CultureInfo.InvariantCulture))"
+                                        aria-label="Score for @control.Code" />
+                                </label>
+                            }
+
+                            <label>
+                                Evidence URL
+                                <input
+                                    class="evidence-url"
+                                    type="url"
+                                    inputmode="url"
+                                    value="@control.EvidenceUrl"
+                                    placeholder="https://"
+                                    aria-label="Evidence URL for @control.Code" />
+                            </label>
+                        </div>
+
+                        <details class="notes">
+                            <summary>Notes</summary>
+                            <textarea
+                                class="notes-value"
+                                rows="4"
+                                aria-label="Notes for @control.Code">@control.Notes</textarea>
+                        </details>
+                        <p class="row-error" role="alert"></p>
+                        <button class="save-row" type="button">Save row</button>
+                    </article>
+                }
+            </div>
+        </details>
+    }
+</main>
+
+<script>
+    (() => {
+        const assessmentId = @Model.Checklist.AssessmentId;
+
+        function errorMessage(problem) {
+            if (!problem || !problem.errors) {
+                return problem && problem.message ? problem.message : "The result could not be saved.";
+            }
+
+            return Object.values(problem.errors).flat().join(" ");
+        }
+
+        async function saveRow(row) {
+            if (row.dataset.saving === "true") {
+                row.dataset.pending = "true";
+                return;
+            }
+
+            const score = row.querySelector(".score");
+            const evidenceUrl = row.querySelector(".evidence-url");
+            if ((score && !score.reportValidity()) || !evidenceUrl.reportValidity()) {
+                return;
+            }
+
+            row.dataset.saving = "true";
+            row.dataset.pending = "false";
+            const state = row.querySelector(".save-state");
+            const error = row.querySelector(".row-error");
+            state.textContent = "Saving…";
+            error.textContent = "";
+
+            const body = {
+                status: row.querySelector(".status").value,
+                score: score && score.value !== "" ? Number(score.value) : null,
+                notes: row.querySelector(".notes-value").value,
+                evidenceUrl: evidenceUrl.value
+            };
+
+            try {
+                const response = await fetch(
+                    `/api/assessments/${assessmentId}/results/${row.dataset.controlId}`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(body)
+                    });
+                const payload = await response.json();
+                if (!response.ok) {
+                    throw new Error(errorMessage(payload));
+                }
+
+                const overall = payload.overallProgress;
+                const domain = payload.domainProgress;
+                document.getElementById("overall-progress").textContent =
+                    `${overall.assessed}/${overall.total} assessed`;
+                document.getElementById(`domain-progress-${domain.domainId}`).textContent =
+                    `${domain.assessed}/${domain.total} assessed`;
+                state.textContent = "Saved";
+            } catch (saveError) {
+                state.textContent = "Not saved";
+                error.textContent = saveError.message;
+            } finally {
+                row.dataset.saving = "false";
+                if (row.dataset.pending === "true") {
+                    saveRow(row);
+                }
+            }
+        }
+
+        document.querySelectorAll(".control-row").forEach(row => {
+            row.querySelector(".status").addEventListener("change", () => saveRow(row));
+            row.querySelectorAll("input, textarea").forEach(input => {
+                input.addEventListener("blur", event => {
+                    if (!event.relatedTarget?.classList.contains("save-row")) {
+                        saveRow(row);
+                    }
+                });
+            });
+            row.querySelector(".save-row").addEventListener("click", () => saveRow(row));
+        });
+    })();
+</script>

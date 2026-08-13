@@ -38,7 +38,9 @@ public sealed class CreateModel(BPRadarDbContext dbContext) : PageModel
             {
                 TempData[nameof(IndexModel.ConfirmationMessage)] =
                     $"Assessment \"{result.Assessment!.Label}\" was created.";
-                return RedirectToPage("/Assessments/Index");
+                return RedirectToPage(
+                    "/Assessments/Checklist",
+                    new { assessmentId = result.Assessment.Id });
             }
 
             foreach (var error in result.Errors)
