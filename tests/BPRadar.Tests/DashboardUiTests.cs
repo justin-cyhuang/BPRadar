@@ -1,17 +1,25 @@
+using System.Diagnostics;
 using System.Net;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using BPRadar.Web.Data;
+using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.Surveys;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using DashboardApplication = BPRadar.Tests.DashboardUiTests.DashboardApplication;
+using TraceCapture = BPRadar.Tests.DashboardUiTests.TraceCapture;
+using static BPRadar.Tests.DashboardUiTests;
 
 namespace BPRadar.Tests;
 
 [TestClass]
-public sealed class DashboardUiTests
+[DoNotParallelize]
+public sealed partial class DashboardUiTests
 {
     [TestMethod]
     public async Task Root_redirects_to_dashboard()
@@ -60,7 +68,12 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "name=\"GapStatus\"");
         StringAssert.Contains(page, "Export CSV");
         StringAssert.Contains(page, "Print / Save as PDF");
-        StringAssert.Contains(page, "handler=Csv");
+        StringAssert.Contains(page, "id=\"csv-export\"");
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "name=\"handler\"\\s+value=\"Csv\"",
+                RegexOptions.CultureInvariant));
         StringAssert.Contains(page, "/Dashboard/Report?");
         StringAssert.Contains(page, "TEST-2");
         StringAssert.Contains(page, "TEST-3");
@@ -115,14 +128,23 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "class=\"radar-series target\"");
         StringAssert.Contains(page, ">Target<");
         StringAssert.Contains(page, "Transformation pulse");
-        StringAssert.Contains(page, "75% profile score");
-        StringAssert.Contains(page, "+25 points vs previous");
+        StringAssert.Contains(page, "Latest Self-Reported State");
+        StringAssert.Contains(page, "75% survey score");
+        StringAssert.Contains(page, "Self-Reported State change");
+        StringAssert.Contains(page, "+25 points vs previous survey");
         StringAssert.Contains(page, "On time");
         StringAssert.Contains(page, "Q3 pulse");
         StringAssert.Contains(page, "Q2 pulse");
         StringAssert.Contains(page, "id=\"survey-trend\"");
+        StringAssert.Contains(page, "Self-Reported State trend");
         StringAssert.Contains(page, "data-score=\"50\"");
         StringAssert.Contains(page, "data-score=\"75\"");
+        StringAssert.Contains(
+            page,
+            "2026-04-01: Self-Reported State score 50%");
+        StringAssert.Contains(
+            page,
+            "2026-07-01: Self-Reported State score 75%");
     }
 
     [TestMethod]
@@ -156,7 +178,12 @@ public sealed class DashboardUiTests
             page,
             "Target markers appear only on frameworks with a configured target.");
     }
+}
 
+[TestClass]
+[DoNotParallelize]
+public sealed partial class DashboardCsvExportTests
+{
     [TestMethod]
     public async Task Csv_export_contains_all_requested_sections_and_trace_metadata()
     {
@@ -208,6 +235,93 @@ public sealed class DashboardUiTests
         StringAssert.Contains(csv, "Survey Domain Deltas");
         StringAssert.Contains(csv, "Domain,Previous Score,Latest Score,Delta");
         StringAssert.Contains(csv, "TEST - Test Domain,50,75,25");
+    }
+
+    [TestMethod]
+    public async Task Csv_export_form_submits_current_scope_with_requested_survey_domain_deltas()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(additionalGapCount: 1);
+        using var pageResponse = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&assessmentIds={setup.UntargetedAssessmentId}" +
+            "&baselineProfileId=" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&gapStatus=NonCompliant&sort=Title&sortDescending=true");
+        var page = await pageResponse.Content.ReadAsStringAsync();
+
+        using var exportResponse = await SubmitGetFormAsync(
+            client,
+            page,
+            "csv-export",
+            "IncludeSurveyDomainDeltas");
+
+        Assert.AreEqual(HttpStatusCode.OK, exportResponse.StatusCode);
+        var csv = await exportResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "Test Framework 1.0 - Current review");
+        StringAssert.Contains(csv, "Untargeted Framework 1.0 - Untargeted review");
+        StringAssert.Contains(csv, "Q3 pulse");
+        StringAssert.Contains(csv, "Survey Domain Deltas");
+        StringAssert.Contains(csv, "TEST - Test Domain,50,75,25");
+        Assert.IsFalse(csv.Contains("TEST-2", StringComparison.Ordinal));
+        Assert.IsFalse(csv.Contains(",80,-46.67,", StringComparison.Ordinal));
+        Assert.IsLessThan(
+            csv.IndexOf("EXTRA-001", StringComparison.Ordinal),
+            csv.IndexOf("TEST-3", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Csv_export_form_omits_survey_domain_deltas_when_option_is_cleared()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+        using var pageResponse = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&includeSurveyDomainDeltas=true");
+        var page = await pageResponse.Content.ReadAsStringAsync();
+
+        using var exportResponse = await SubmitGetFormAsync(
+            client,
+            page,
+            "csv-export");
+
+        Assert.AreEqual(HttpStatusCode.OK, exportResponse.StatusCode);
+        var csv = await exportResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(csv, "Q3 pulse");
+        Assert.IsFalse(
+            csv.Contains("Survey Domain Deltas", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Csv_export_form_disables_domain_deltas_without_a_survey_template()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            "&surveyTemplateId=");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "name=\"IncludeSurveyDomainDeltas\"[^>]*disabled=\"disabled\"",
+                RegexOptions.CultureInvariant));
+        StringAssert.Contains(
+            page,
+            "Select a Survey Template to include survey domain deltas.");
     }
 
     [TestMethod]
@@ -269,7 +383,12 @@ public sealed class DashboardUiTests
             csv,
             "TEST-2,Test control 2,Partial,10,'=1+1");
     }
+}
 
+[TestClass]
+[DoNotParallelize]
+public sealed partial class DashboardPrintReportTests
+{
     [TestMethod]
     public async Task Print_report_renders_audit_handoff_content_and_gap_continuation()
     {
@@ -298,17 +417,160 @@ public sealed class DashboardUiTests
         StringAssert.Contains(report, "id=\"report-radar-chart\"");
         StringAssert.Contains(report, "class=\"radar-series target\"");
         StringAssert.Contains(report, "Survey transformation summary");
-        StringAssert.Contains(report, "75% profile score");
-        StringAssert.Contains(report, "+25 points vs previous");
+        StringAssert.Contains(report, "Latest Self-Reported State");
+        StringAssert.Contains(report, "75% survey score");
+        StringAssert.Contains(report, "Self-Reported State change");
+        StringAssert.Contains(report, "+25 points vs previous survey");
         StringAssert.Contains(report, "id=\"report-survey-trend\"");
+        StringAssert.Contains(report, "Self-Reported State trend");
+        foreach (var level in new[] { 0, 25, 50, 75, 100 })
+        {
+            StringAssert.Contains(report, $">{level}%<");
+        }
+
+        StringAssert.Contains(report, ">2026-04-01<");
+        StringAssert.Contains(report, ">2026-07-01<");
+        StringAssert.Contains(
+            report,
+            "2026-04-01: Self-Reported State score 50%");
+        StringAssert.Contains(
+            report,
+            "2026-07-01: Self-Reported State score 75%");
         StringAssert.Contains(report, "Gap details");
         StringAssert.Contains(report, "EXTRA-001");
         StringAssert.Contains(report, "7 additional gaps are available in the CSV export.");
         StringAssert.Contains(report, "window.print()");
         StringAssert.Contains(report, "@media print");
     }
+}
 
-    private sealed class DashboardApplication(
+[TestClass]
+[DoNotParallelize]
+public sealed class DashboardReportingEndpointTests
+{
+    [TestMethod]
+    public async Task Export_routes_apply_identical_scope_and_explicit_no_baseline_semantics()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(additionalGapCount: 1);
+        var scope =
+            $"organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            "&baselineProfileId=" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&gapStatus=NonCompliant&sort=Title&sortDescending=true";
+
+        using var csvResponse = await client.GetAsync($"/Dashboard?handler=Csv&{scope}");
+        using var reportResponse = await client.GetAsync($"/Dashboard/Report?{scope}");
+
+        Assert.AreEqual(HttpStatusCode.OK, csvResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, reportResponse.StatusCode);
+        var csv = await csvResponse.Content.ReadAsStringAsync();
+        var report = WebUtility.HtmlDecode(
+            await reportResponse.Content.ReadAsStringAsync());
+        Assert.IsLessThan(
+            csv.IndexOf("EXTRA-001", StringComparison.Ordinal),
+            csv.IndexOf("TEST-3", StringComparison.Ordinal));
+        Assert.IsLessThan(
+            report.IndexOf("EXTRA-001", StringComparison.Ordinal),
+            report.IndexOf("TEST-3", StringComparison.Ordinal));
+        Assert.IsFalse(csv.Contains("TEST-2", StringComparison.Ordinal));
+        Assert.IsFalse(report.Contains("TEST-2", StringComparison.Ordinal));
+        StringAssert.Contains(csv, "Q3 pulse");
+        StringAssert.Contains(report, "Transformation pulse");
+        Assert.IsFalse(csv.Contains(",80,-46.67,", StringComparison.Ordinal));
+        Assert.IsFalse(report.Contains(">Target<", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Export_routes_return_correlation_bearing_problem_responses()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        foreach (var (path, expectedStatus) in new[]
+                 {
+                     (
+                         "/Dashboard?handler=Csv&organizationId=999999",
+                         HttpStatusCode.NotFound),
+                     (
+                         "/Dashboard/Report?organizationId=999999",
+                         HttpStatusCode.NotFound),
+                     (
+                         "/Dashboard?handler=Csv",
+                         HttpStatusCode.NotFound),
+                     (
+                         "/Dashboard/Report",
+                         HttpStatusCode.NotFound),
+                     (
+                         $"/Dashboard?handler=Csv&organizationId={setup.OrganizationId}&sort=invalid",
+                         HttpStatusCode.BadRequest),
+                     (
+                         $"/Dashboard/Report?organizationId={setup.OrganizationId}&sort=invalid",
+                         HttpStatusCode.BadRequest)
+                 })
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, path);
+            request.Headers.Add("X-Correlation-ID", "missing-export-scope-32");
+            using var response = await client.SendAsync(request);
+
+            Assert.AreEqual(expectedStatus, response.StatusCode);
+            Assert.AreEqual(
+                "application/problem+json",
+                response.Content.Headers.ContentType?.MediaType);
+            using var problem = JsonDocument.Parse(
+                await response.Content.ReadAsStringAsync());
+            Assert.AreEqual(
+                "missing-export-scope-32",
+                problem.RootElement.GetProperty("correlationId").GetString());
+        }
+    }
+
+    [TestMethod]
+    public async Task Export_completion_traces_include_business_ids_without_notes()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync(
+            partialNotes: "secret diagnostic notes");
+        using var trace = new TraceCapture();
+        var scope =
+            $"organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&frameworkId={setup.TargetedFrameworkId}" +
+            $"&domainId={setup.DomainId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}";
+
+        using var csvResponse = await client.GetAsync($"/Dashboard?handler=Csv&{scope}");
+        using var reportResponse = await client.GetAsync($"/Dashboard/Report?{scope}");
+
+        Assert.AreEqual(HttpStatusCode.OK, csvResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, reportResponse.StatusCode);
+        var output = trace.Output;
+        StringAssert.Contains(output, "operation=CsvExportCompleted");
+        StringAssert.Contains(output, "operation=PrintReportCompleted");
+        StringAssert.Contains(output, $"OrganizationId={setup.OrganizationId}");
+        StringAssert.Contains(output, "OrganizationName=\"Contoso\"");
+        StringAssert.Contains(output, $"AssessmentIds={setup.AssessmentId}");
+        StringAssert.Contains(output, $"FrameworkIds={setup.TargetedFrameworkId}");
+        StringAssert.Contains(output, "Frameworks=\"Test Framework 1.0\"");
+        StringAssert.Contains(output, $"DomainId={setup.DomainId}");
+        StringAssert.Contains(output, $"SurveyTemplateId={setup.SurveyTemplateId}");
+        StringAssert.Contains(
+            output,
+            "SurveyTemplateName=\"Transformation pulse\"");
+        Assert.IsFalse(
+            output.Contains("secret diagnostic notes", StringComparison.Ordinal));
+    }
+}
+
+public sealed partial class DashboardUiTests
+{
+    internal sealed class DashboardApplication(
         string databasePath,
         WebApplicationFactory<Program> factory) : IAsyncDisposable
     {
@@ -321,24 +583,28 @@ public sealed class DashboardUiTests
                 Path.GetTempPath(),
                 $"bpradar-dashboard-ui-{Guid.NewGuid():N}.db");
             var factory = new WebApplicationFactory<Program>()
-                .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+                .WithWebHostBuilder(builder =>
                 {
-                    services.RemoveAll<DbContextOptions<BPRadarDbContext>>();
-                    services.RemoveAll<TimeProvider>();
-                    services.AddDbContext<BPRadarDbContext>(
-                        options => options.UseSqlite(
-                            $"Data Source={databasePath};Pooling=False"));
-                    services.AddSingleton<TimeProvider>(
-                        new FixedTimeProvider(
-                            new DateTimeOffset(
-                                2026,
-                                8,
-                                13,
-                                8,
-                                0,
-                                0,
-                                TimeSpan.Zero)));
-                }));
+                    builder.UseSetting("Tracing:Level", "All");
+                    builder.ConfigureServices(services =>
+                    {
+                        services.RemoveAll<DbContextOptions<BPRadarDbContext>>();
+                        services.RemoveAll<TimeProvider>();
+                        services.AddDbContext<BPRadarDbContext>(
+                            options => options.UseSqlite(
+                                $"Data Source={databasePath};Pooling=False"));
+                        services.AddSingleton<TimeProvider>(
+                            new FixedTimeProvider(
+                                new DateTimeOffset(
+                                    2026,
+                                    8,
+                                    13,
+                                    8,
+                                    0,
+                                    0,
+                                    TimeSpan.Zero)));
+                    });
+                });
             return new DashboardApplication(databasePath, factory);
         }
 
@@ -349,7 +615,8 @@ public sealed class DashboardUiTests
 
         public async Task<DashboardSetup> SeedAsync(
             int additionalGapCount = 0,
-            string partialNotes = "Note 2")
+            string partialNotes = "Note 2",
+            bool includeSurveySubmissions = true)
         {
             await using var scope = factory.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<BPRadarDbContext>();
@@ -507,12 +774,11 @@ public sealed class DashboardUiTests
                 SurveyQuestion = surveyQuestion,
                 ResponseLevel = SurveyResponseLevel.High
             });
-            dbContext.AddRange(
-                assessment,
-                untargetedAssessment,
-                profile,
-                previousSubmission,
-                latestSubmission);
+            dbContext.AddRange(assessment, untargetedAssessment, profile, surveyTemplate);
+            if (includeSurveySubmissions)
+            {
+                dbContext.AddRange(previousSubmission, latestSubmission);
+            }
             await dbContext.SaveChangesAsync();
             return new DashboardSetup(
                 organization.Id,
@@ -533,7 +799,7 @@ public sealed class DashboardUiTests
         }
     }
 
-    private sealed record DashboardSetup(
+    internal sealed record DashboardSetup(
         int OrganizationId,
         int AssessmentId,
         int ProfileId,
@@ -544,8 +810,86 @@ public sealed class DashboardUiTests
         int UntargetedAssessmentId,
         int UntargetedFrameworkId);
 
+    internal static async Task<HttpResponseMessage> SubmitGetFormAsync(
+        HttpClient client,
+        string page,
+        string formId,
+        params string[] checkedInputs)
+    {
+        var form = Regex.Match(
+            page,
+            $"""<form[^>]*id="{Regex.Escape(formId)}"[^>]*>(?<content>.*?)</form>""",
+            RegexOptions.CultureInvariant | RegexOptions.Singleline);
+        Assert.IsTrue(form.Success, $"Expected rendered form '{formId}'.");
+        var action = WebUtility.HtmlDecode(
+            Regex.Match(
+                form.Value,
+                "action=\"(?<value>[^\"]*)\"",
+                RegexOptions.CultureInvariant).Groups["value"].Value);
+        var selected = checkedInputs.ToHashSet(StringComparer.Ordinal);
+        var values = Regex.Matches(
+                form.Groups["content"].Value,
+                "<input[^>]*>",
+                RegexOptions.CultureInvariant)
+            .Select(match => match.Value)
+            .Where(input =>
+                !input.Contains("disabled", StringComparison.OrdinalIgnoreCase))
+            .Select(input => new
+            {
+                Name = Attribute(input, "name"),
+                Value = Attribute(input, "value"),
+                Type = Attribute(input, "type")
+            })
+            .Where(input =>
+                input.Name.Length > 0 &&
+                (!input.Type.Equals("checkbox", StringComparison.OrdinalIgnoreCase) ||
+                 selected.Contains(input.Name)))
+            .Select(input => new KeyValuePair<string, string>(
+                input.Name,
+                WebUtility.HtmlDecode(input.Value)))
+            .ToArray();
+        using var content = new FormUrlEncodedContent(values);
+        var query = await content.ReadAsStringAsync();
+        return await client.GetAsync($"{action}?{query}");
+    }
+
+    private static string Attribute(string element, string name) =>
+        Regex.Match(
+            element,
+            $"\\b{Regex.Escape(name)}=\"(?<value>[^\"]*)\"",
+            RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)
+            .Groups["value"]
+            .Value;
+
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {
         public override DateTimeOffset GetUtcNow() => utcNow;
+    }
+
+    internal sealed class TraceCapture : IDisposable
+    {
+        private readonly StringBuilder output = new();
+        private readonly TextWriterTraceListener listener;
+
+        public TraceCapture()
+        {
+            listener = new TextWriterTraceListener(new StringWriter(output));
+            BPRadarTrace.Source.Listeners.Add(listener);
+        }
+
+        public string Output
+        {
+            get
+            {
+                listener.Flush();
+                return output.ToString();
+            }
+        }
+
+        public void Dispose()
+        {
+            BPRadarTrace.Source.Listeners.Remove(listener);
+            listener.Dispose();
+        }
     }
 }

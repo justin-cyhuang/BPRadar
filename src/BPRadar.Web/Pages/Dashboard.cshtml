@@ -85,14 +85,6 @@
                     }
                 </select>
             </label>
-            <label class="checkbox-label">
-                <input
-                    type="checkbox"
-                    name="IncludeSurveyDomainDeltas"
-                    value="true"
-                    checked="@Model.IncludeSurveyDomainDeltas" />
-                <span>Include survey domain deltas in CSV</span>
-            </label>
             <button type="submit">Apply scope</button>
         </form>
 
@@ -101,8 +93,45 @@
             <p>
                 Exports use the current assessment scope and gap filters.
             </p>
-            <a class="button" href="@ExportUrl(report: false)">Export CSV</a>
-            <a class="button" href="@ExportUrl(report: true)">Print / Save as PDF</a>
+            <form id="csv-export" method="get" action="/Dashboard">
+                <input type="hidden" name="handler" value="Csv" />
+                <input type="hidden" name="OrganizationId" value="@Model.OrganizationId" />
+                @foreach (var assessmentId in dashboard.SelectedAssessmentIds)
+                {
+                    <input type="hidden" name="AssessmentIds" value="@assessmentId" />
+                }
+                <input
+                    type="hidden"
+                    name="BaselineProfileId"
+                    value="@dashboard.SelectedBaselineProfileId" />
+                <input
+                    type="hidden"
+                    name="SurveyTemplateId"
+                    value="@dashboard.SelectedSurveyTemplateId" />
+                <input type="hidden" name="FrameworkId" value="@Model.FrameworkId" />
+                <input type="hidden" name="DomainId" value="@Model.DomainId" />
+                <input type="hidden" name="GapStatus" value="@Model.GapStatus" />
+                <input type="hidden" name="Sort" value="@Model.Sort" />
+                <input
+                    type="hidden"
+                    name="SortDescending"
+                    value="@Model.SortDescending.ToString().ToLowerInvariant()" />
+                <label class="checkbox-label">
+                    <input
+                        type="checkbox"
+                        name="IncludeSurveyDomainDeltas"
+                        value="true"
+                        checked="@Model.IncludeSurveyDomainDeltas"
+                        disabled="@(dashboard.SelectedSurveyTemplateId is null)" />
+                    <span>Include survey domain deltas</span>
+                </label>
+                @if (dashboard.SelectedSurveyTemplateId is null)
+                {
+                    <p>Select a Survey Template to include survey domain deltas.</p>
+                }
+                <button type="submit">Export CSV</button>
+            </form>
+            <a class="button" href="@ReportUrl()">Print / Save as PDF</a>
         </section>
 
         <section aria-labelledby="overview-heading">
@@ -302,19 +331,19 @@
                 <h3>@tracking.SurveyTemplateName</h3>
                 <div class="survey-summary">
                     <article>
-                        <h4>Latest profile</h4>
+                        <h4>Latest Self-Reported State</h4>
                         <strong>
                             @(tracking.LatestScore is null
                                 ? "No scored submissions"
-                                : $"{tracking.LatestScore.Value:0.#}% profile score")
+                                : $"{tracking.LatestScore.Value:0.#}% survey score")
                         </strong>
                     </article>
                     <article>
-                        <h4>Change</h4>
+                        <h4>Self-Reported State change</h4>
                         <strong>
                             @(tracking.LatestDelta is null
-                                ? "No previous score"
-                                : $"{tracking.LatestDelta.Value:+0.#;-0.#;0} points vs previous")
+                                ? "No previous survey score"
+                                : $"{tracking.LatestDelta.Value:+0.#;-0.#;0} points vs previous survey")
                         </strong>
                     </article>
                     <article>
@@ -339,56 +368,11 @@
                 {
                     <div class="survey-trend-layout">
                         <div class="chart-container">
-                            <h3>Profile score trend</h3>
-                            <svg
-                                id="survey-trend"
-                                class="trend-chart"
-                                viewBox="0 0 600 240"
-                                role="img"
-                                aria-labelledby="trend-title trend-description">
-                                <title id="trend-title">Survey profile score trend</title>
-                                <desc id="trend-description">
-                                    Profile scores by survey snapshot date, from zero to one hundred percent.
-                                </desc>
-                                @foreach (var level in new[] { 0, 25, 50, 75, 100 })
-                                {
-                                    <line
-                                        class="trend-grid"
-                                        x1="60"
-                                        y1="@TrendY(level)"
-                                        x2="560"
-                                        y2="@TrendY(level)" />
-                                    @SvgText(
-                                        "trend-label",
-                                        "52",
-                                        (TrendY(level) + 4).ToString(
-                                            "0.##",
-                                            CultureInfo.InvariantCulture),
-                                        $"{level}%",
-                                        "end")
-                                }
-                                @if (tracking.Trend.Length > 1)
-                                {
-                                    <polyline
-                                        class="trend-line"
-                                        points="@TrendPoints(tracking.Trend)" />
-                                }
-                                @for (var index = 0; index < tracking.Trend.Length; index++)
-                                {
-                                    var point = tracking.Trend[index];
-                                    <circle
-                                        class="trend-point"
-                                        data-score="@point.Score.ToString("0.##", CultureInfo.InvariantCulture)"
-                                        cx="@TrendX(index, tracking.Trend.Length)"
-                                        cy="@TrendY(point.Score)"
-                                        r="5">
-                                        <title>
-                                            @point.SnapshotDate.ToString("yyyy-MM-dd"):
-                                            @point.Score.ToString("0.#")%
-                                        </title>
-                                    </circle>
-                                }
-                            </svg>
+                            @await Html.PartialAsync(
+                                "_SurveyTrendChart",
+                                new SurveyTrendChartModel(
+                                    "survey-trend",
+                                    tracking.Trend))
                         </div>
 
                         <div class="table-scroll">
@@ -470,11 +454,6 @@
                     type="hidden"
                     name="SurveyTemplateId"
                     value="@dashboard.SelectedSurveyTemplateId" />
-                <input
-                    type="hidden"
-                    name="IncludeSurveyDomainDeltas"
-                    value="@Model.IncludeSurveyDomainDeltas.ToString().ToLowerInvariant()" />
-
                 <label>
                     Framework
                     <select name="FrameworkId">
@@ -605,7 +584,7 @@
 </script>
 
 @functions {
-    private string ExportUrl(bool report)
+    private string ReportUrl()
     {
         var dashboard = Model.Dashboard!;
         var parameters = new List<KeyValuePair<string, string?>>
@@ -629,16 +608,7 @@
                 new KeyValuePair<string, string?>(
                     "AssessmentIds",
                     id.ToString(CultureInfo.InvariantCulture))));
-        if (!report)
-        {
-            parameters.Add(new("handler", "Csv"));
-            parameters.Add(new(
-                "IncludeSurveyDomainDeltas",
-                Model.IncludeSurveyDomainDeltas.ToString().ToLowerInvariant()));
-        }
-
-        var path = report ? "/Dashboard/Report" : "/Dashboard";
-        return path + QueryString.Create(parameters);
+        return "/Dashboard/Report" + QueryString.Create(parameters);
     }
 
     private static IHtmlContent SvgText(
