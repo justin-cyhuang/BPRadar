@@ -1,4 +1,5 @@
 using BPRadar.Web.Data;
+using BPRadar.Web.Features.Surveys;
 using Microsoft.EntityFrameworkCore;
 
 namespace BPRadar.Web.Features.Dashboard;
@@ -157,6 +158,173 @@ public static class DashboardService
             })
             .ToArray();
 
+        var radarResults = await dbContext.AssessmentResults
+            .AsNoTracking()
+            .Where(result =>
+                assessmentIds.Contains(result.AssessmentId) &&
+                (result.Status == ComplianceStatus.Compliant ||
+                 result.Status == ComplianceStatus.Partial ||
+                 result.Status == ComplianceStatus.NonCompliant))
+            .Select(result => new
+            {
+                result.AssessmentId,
+                result.Status
+            })
+            .ToArrayAsync(cancellationToken);
+        var radarScoreByAssessmentId = radarResults
+            .GroupBy(result => result.AssessmentId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Average(result => result.Status switch
+                {
+                    ComplianceStatus.Compliant => 100m,
+                    ComplianceStatus.Partial => 50m,
+                    _ => 0m
+                }));
+        var radarAxes = assessments
+            .Select(assessment => new RadarAxis(
+                assessment.FrameworkId,
+                $"{assessment.FrameworkName} {assessment.FrameworkVersion}"))
+            .DistinctBy(axis => axis.FrameworkId)
+            .ToArray();
+        var radarSeries = assessments
+            .Select(assessment => new RadarSeries(
+                assessment.Id,
+                $"{assessment.FrameworkName} — {assessment.Label}",
+                radarAxes
+                    .Select(axis =>
+                        axis.FrameworkId == assessment.FrameworkId &&
+                        radarScoreByAssessmentId.TryGetValue(
+                            assessment.Id,
+                            out var score)
+                                ? score
+                                : 0m)
+                    .ToArray()))
+            .ToArray();
+        var targetSeries = baselineProfileId is null
+            ? null
+            : new RadarSeries(
+                null,
+                "Target",
+                radarAxes
+                    .Select(axis => targetByFrameworkId.GetValueOrDefault(axis.FrameworkId))
+                    .ToArray(),
+                IsTarget: true);
+        var radar = new RadarChart(
+            radarAxes,
+            [25m, 50m, 75m, 100m],
+            radarSeries,
+            targetSeries);
+
+        var surveyTemplateOptions = await dbContext.SurveyTemplates
+            .AsNoTracking()
+            .Where(template => template.IsActive)
+            .OrderBy(template => template.Name)
+            .Select(template => new DashboardSurveyTemplateOption(
+                template.Id,
+                template.Name,
+                template.Cadence))
+            .ToArrayAsync(cancellationToken);
+        var selectedSurveyTemplateId = request.SurveyTemplateId is not null &&
+            surveyTemplateOptions.Any(option => option.Id == request.SurveyTemplateId)
+                ? request.SurveyTemplateId
+                : null;
+        SurveyTracking? surveyTracking = null;
+        if (selectedSurveyTemplateId is not null)
+        {
+            var cadence = await SurveyCadenceService.GetStatusAsync(
+                dbContext,
+                request.OrganizationId,
+                selectedSurveyTemplateId.Value,
+                request.CurrentDate?.Date ?? DateTime.UtcNow.Date,
+                cancellationToken);
+            var submissions = await dbContext.SurveySubmissions
+                .AsNoTracking()
+                .Where(submission =>
+                    submission.OrganizationId == request.OrganizationId &&
+                    submission.SurveyTemplateId == selectedSurveyTemplateId)
+                .Include(submission => submission.Responses)
+                .ThenInclude(response => response.SurveyQuestion)
+                .ThenInclude(question => question.Domain)
+                .OrderByDescending(submission => submission.SnapshotDate)
+                .ThenByDescending(submission => submission.SubmittedAt)
+                .ThenByDescending(submission => submission.Id)
+                .ToArrayAsync(cancellationToken);
+            var scoredSubmissions = submissions
+                .Select(submission => new
+                {
+                    Submission = submission,
+                    Score = SurveyScoringService.CalculateProfileScore(
+                        submission.Responses)
+                })
+                .ToArray();
+            var history = scoredSubmissions
+                .Select((item, index) =>
+                {
+                    var previousScore = index + 1 < scoredSubmissions.Length
+                        ? scoredSubmissions[index + 1].Score
+                        : null;
+                    var delta = item.Score is not null && previousScore is not null
+                        ? item.Score.Value - previousScore.Value
+                        : (decimal?)null;
+                    return new SurveyHistoryItem(
+                        item.Submission.Id,
+                        item.Submission.Label,
+                        item.Submission.SnapshotDate,
+                        item.Score,
+                        delta,
+                        item.Submission.Notes);
+                })
+                .ToArray();
+            var trend = history
+                .Where(item => item.Score is not null)
+                .OrderBy(item => item.SnapshotDate)
+                .ThenBy(item => item.SubmissionId)
+                .Select(item => new SurveyTrendPoint(
+                    item.SnapshotDate,
+                    item.Score!.Value))
+                .ToArray();
+            var domainDeltas = Array.Empty<SurveyDomainDelta>();
+            if (submissions.Length >= 2)
+            {
+                var latestDomainScores =
+                    SurveyScoringService.CalculateDomainScores(
+                        submissions[0].Responses);
+                var previousDomainScores =
+                    SurveyScoringService.CalculateDomainScores(
+                        submissions[1].Responses);
+                domainDeltas = submissions[0].Responses
+                    .Where(response => response.SurveyQuestion.Domain is not null)
+                    .Select(response => response.SurveyQuestion.Domain!)
+                    .DistinctBy(domain => domain.Id)
+                    .Where(domain =>
+                        latestDomainScores.ContainsKey(domain.Id) &&
+                        previousDomainScores.ContainsKey(domain.Id))
+                    .OrderBy(domain => domain.SortOrder)
+                    .ThenBy(domain => domain.Code)
+                    .Select(domain => new SurveyDomainDelta(
+                        domain.Id,
+                        domain.Code,
+                        domain.Name,
+                        latestDomainScores[domain.Id],
+                        previousDomainScores[domain.Id],
+                        latestDomainScores[domain.Id] -
+                            previousDomainScores[domain.Id]))
+                    .ToArray();
+            }
+
+            surveyTracking = new SurveyTracking(
+                cadence!.TemplateId,
+                cadence.Name,
+                scoredSubmissions.FirstOrDefault()?.Score,
+                history.FirstOrDefault()?.Delta,
+                cadence.Status,
+                cadence.NextDueDate,
+                history,
+                trend,
+                domainDeltas);
+        }
+
         var gapQuery = dbContext.AssessmentResults
             .AsNoTracking()
             .Where(result =>
@@ -230,7 +398,11 @@ public static class DashboardService
             baselineOptions,
             frameworkFilters,
             overviews,
-            gaps);
+            gaps,
+            radar,
+            selectedSurveyTemplateId,
+            surveyTemplateOptions,
+            surveyTracking);
     }
 
     private static decimal Percent(int numerator, int denominator) =>
@@ -269,7 +441,9 @@ public sealed record DashboardRequest(
     int? DomainId = null,
     ComplianceStatus? GapStatus = null,
     DashboardGapSort Sort = DashboardGapSort.ControlCode,
-    bool SortDescending = false);
+    bool SortDescending = false,
+    int? SurveyTemplateId = null,
+    DateTime? CurrentDate = null);
 
 public sealed record DashboardView(
     int[] SelectedAssessmentIds,
@@ -278,7 +452,11 @@ public sealed record DashboardView(
     DashboardBaselineOption[] BaselineOptions,
     DashboardFrameworkFilter[] FrameworkFilters,
     AssessmentOverview[] Overviews,
-    DashboardGap[] Gaps);
+    DashboardGap[] Gaps,
+    RadarChart Radar,
+    int? SelectedSurveyTemplateId,
+    DashboardSurveyTemplateOption[] SurveyTemplateOptions,
+    SurveyTracking? SurveyTracking);
 
 public sealed record DashboardAssessmentOption(
     int Id,
@@ -292,6 +470,11 @@ public sealed record DashboardBaselineOption(
     int Id,
     string Name,
     bool IsDefault);
+
+public sealed record DashboardSurveyTemplateOption(
+    int Id,
+    string Name,
+    SurveyCadence Cadence);
 
 public sealed record DashboardFrameworkFilter(
     int Id,
@@ -331,6 +514,49 @@ public sealed record DashboardGap(
     ComplianceStatus Status,
     decimal? Score,
     string? Notes);
+
+public sealed record RadarChart(
+    RadarAxis[] Axes,
+    decimal[] GridLevels,
+    RadarSeries[] Series,
+    RadarSeries? TargetSeries);
+
+public sealed record RadarAxis(int FrameworkId, string Label);
+
+public sealed record RadarSeries(
+    int? AssessmentId,
+    string Label,
+    decimal[] Values,
+    bool IsTarget = false);
+
+public sealed record SurveyTracking(
+    int SurveyTemplateId,
+    string SurveyTemplateName,
+    decimal? LatestScore,
+    decimal? LatestDelta,
+    SurveyDueStatus CadenceStatus,
+    DateTime? NextDueDate,
+    SurveyHistoryItem[] History,
+    SurveyTrendPoint[] Trend,
+    SurveyDomainDelta[] DomainDeltas);
+
+public sealed record SurveyHistoryItem(
+    int SubmissionId,
+    string Label,
+    DateTime SnapshotDate,
+    decimal? Score,
+    decimal? Delta,
+    string? Notes);
+
+public sealed record SurveyTrendPoint(DateTime SnapshotDate, decimal Score);
+
+public sealed record SurveyDomainDelta(
+    int DomainId,
+    string DomainCode,
+    string DomainName,
+    decimal LatestScore,
+    decimal PreviousScore,
+    decimal Delta);
 
 public enum DashboardGapSort
 {

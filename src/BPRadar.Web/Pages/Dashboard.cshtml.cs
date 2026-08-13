@@ -6,7 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BPRadar.Web.Pages;
 
-public sealed class DashboardModel(BPRadarDbContext dbContext) : PageModel
+public sealed class DashboardModel(
+    BPRadarDbContext dbContext,
+    TimeProvider timeProvider) : PageModel
 {
     [BindProperty(SupportsGet = true)]
     public int? OrganizationId { get; set; }
@@ -16,6 +18,9 @@ public sealed class DashboardModel(BPRadarDbContext dbContext) : PageModel
 
     [BindProperty(SupportsGet = true)]
     public int? BaselineProfileId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int? SurveyTemplateId { get; set; }
 
     [BindProperty(SupportsGet = true)]
     public int? FrameworkId { get; set; }
@@ -71,10 +76,13 @@ public sealed class DashboardModel(BPRadarDbContext dbContext) : PageModel
                 DomainId,
                 GapStatus,
                 Sort,
-                SortDescending),
+                SortDescending,
+                SurveyTemplateId,
+                timeProvider.GetUtcNow().UtcDateTime.Date),
             cancellationToken);
         AssessmentIds = Dashboard.SelectedAssessmentIds;
         BaselineProfileId = Dashboard.SelectedBaselineProfileId;
+        SurveyTemplateId = Dashboard.SelectedSurveyTemplateId;
     }
 }
 

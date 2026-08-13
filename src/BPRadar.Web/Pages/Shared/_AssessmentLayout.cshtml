@@ -49,6 +49,28 @@
         .gap-row { cursor: pointer; }
         .gap-row:focus { outline: 2px solid #0969da; outline-offset: -2px; }
         .gap-row:hover { background: #f6f8fa; }
+        .chart-container { border: 1px solid #d0d7de; border-radius: .5rem; padding: 1rem; }
+        .radar-chart, .trend-chart { display: block; height: auto; max-width: 100%; width: 100%; }
+        .radar-grid, .radar-axis, .trend-grid { fill: none; stroke: #d8dee4; stroke-width: 1; }
+        .radar-grid-label, .trend-label { fill: #57606a; font-size: .7rem; }
+        .radar-axis-label { fill: #24292f; font-size: .75rem; font-weight: 600; }
+        .radar-series { fill: color-mix(in srgb, var(--series-color) 18%, transparent); stroke: var(--series-color); stroke-width: 3; }
+        .radar-series.target { --series-color: #57606a; fill: none; stroke-dasharray: 8 5; }
+        .chart-legend { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; list-style: none; padding: 0; }
+        .chart-legend li { align-items: center; display: flex; gap: .4rem; }
+        .legend-swatch { background: var(--series-color); display: inline-block; height: .75rem; width: 1.5rem; }
+        .legend-swatch.target { background: repeating-linear-gradient(90deg, #57606a 0 6px, transparent 6px 10px); border: 1px solid #57606a; }
+        .survey-summary { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+        .survey-summary article { background: #f6f8fa; border-radius: .5rem; padding: 1rem; }
+        .survey-summary h4 { color: #57606a; font-size: .85rem; margin: 0 0 .5rem; }
+        .survey-summary strong, .survey-summary span { display: block; }
+        .survey-summary span { color: #57606a; font-size: .85rem; margin-top: .4rem; }
+        .survey-trend-layout { display: grid; gap: 1rem; grid-template-columns: minmax(18rem, 1fr) minmax(24rem, 1.4fr); margin-top: 1rem; }
+        .trend-line { fill: none; stroke: #0969da; stroke-linejoin: round; stroke-width: 3; }
+        .trend-point { fill: #0969da; stroke: white; stroke-width: 2; }
+        @@media (max-width: 50rem) {
+            .survey-trend-layout { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>

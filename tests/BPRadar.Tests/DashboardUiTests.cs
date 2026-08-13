@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.RegularExpressions;
 using BPRadar.Web.Data;
+using BPRadar.Web.Features.Surveys;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +77,50 @@ public sealed class DashboardUiTests
         StringAssert.Contains(checklist, "window.location.hash");
     }
 
+    [TestMethod]
+    public async Task Dashboard_renders_radar_target_and_selected_survey_tracking_panel()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&baselineProfileId={setup.ProfileId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Contains(page, "name=\"SurveyTemplateId\"");
+        StringAssert.Matches(
+            page,
+            new Regex(
+                $"value=\"{setup.SurveyTemplateId}\"\\s+selected=\"selected\"",
+                RegexOptions.CultureInvariant));
+        StringAssert.Contains(page, "id=\"radar-chart\"");
+        foreach (var level in new[] { 25, 50, 75, 100 })
+        {
+            StringAssert.Contains(page, $"data-grid-level=\"{level}\"");
+        }
+
+        StringAssert.Contains(
+            page,
+            $"data-radar-series-assessment-id=\"{setup.AssessmentId}\"");
+        StringAssert.Contains(page, "class=\"radar-series target\"");
+        StringAssert.Contains(page, ">Target<");
+        StringAssert.Contains(page, "Transformation pulse");
+        StringAssert.Contains(page, "75% profile score");
+        StringAssert.Contains(page, "+25 points vs previous");
+        StringAssert.Contains(page, "On time");
+        StringAssert.Contains(page, "Q3 pulse");
+        StringAssert.Contains(page, "Q2 pulse");
+        StringAssert.Contains(page, "id=\"survey-trend\"");
+        StringAssert.Contains(page, "data-score=\"50\"");
+        StringAssert.Contains(page, "data-score=\"75\"");
+    }
+
     private sealed class DashboardApplication(
         string databasePath,
         WebApplicationFactory<Program> factory) : IAsyncDisposable
@@ -92,9 +137,20 @@ public sealed class DashboardUiTests
                 .WithWebHostBuilder(builder => builder.ConfigureServices(services =>
                 {
                     services.RemoveAll<DbContextOptions<BPRadarDbContext>>();
+                    services.RemoveAll<TimeProvider>();
                     services.AddDbContext<BPRadarDbContext>(
                         options => options.UseSqlite(
                             $"Data Source={databasePath};Pooling=False"));
+                    services.AddSingleton<TimeProvider>(
+                        new FixedTimeProvider(
+                            new DateTimeOffset(
+                                2026,
+                                8,
+                                13,
+                                8,
+                                0,
+                                0,
+                                TimeSpan.Zero)));
                 }));
             return new DashboardApplication(databasePath, factory);
         }
@@ -178,13 +234,64 @@ public sealed class DashboardUiTests
                 Framework = framework,
                 TargetCompliancePercent = 80m
             });
-            dbContext.AddRange(assessment, profile);
+            var surveyTemplate = new SurveyTemplate
+            {
+                Name = "Transformation pulse",
+                Cadence = SurveyCadence.Quarterly,
+                IsActive = true,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+            var surveyQuestion = new SurveyQuestion
+            {
+                Code = "PULSE-1",
+                Prompt = "How mature is this capability?",
+                Domain = domain,
+                Weight = 1m,
+                SortOrder = 1,
+                IsRequired = true
+            };
+            surveyTemplate.Questions.Add(surveyQuestion);
+            var previousSubmission = new SurveySubmission
+            {
+                Organization = organization,
+                SurveyTemplate = surveyTemplate,
+                Label = "Q2 pulse",
+                SnapshotDate = new DateTime(2026, 4, 1),
+                SubmittedAt = new DateTime(2026, 4, 2, 8, 0, 0, DateTimeKind.Utc),
+                Notes = "Previous snapshot"
+            };
+            previousSubmission.Responses.Add(new SurveyResponse
+            {
+                SurveyQuestion = surveyQuestion,
+                ResponseLevel = SurveyResponseLevel.Medium
+            });
+            var latestSubmission = new SurveySubmission
+            {
+                Organization = organization,
+                SurveyTemplate = surveyTemplate,
+                Label = "Q3 pulse",
+                SnapshotDate = new DateTime(2026, 7, 1),
+                SubmittedAt = new DateTime(2026, 7, 2, 8, 0, 0, DateTimeKind.Utc),
+                Notes = "Latest snapshot"
+            };
+            latestSubmission.Responses.Add(new SurveyResponse
+            {
+                SurveyQuestion = surveyQuestion,
+                ResponseLevel = SurveyResponseLevel.High
+            });
+            dbContext.AddRange(
+                assessment,
+                profile,
+                previousSubmission,
+                latestSubmission);
             await dbContext.SaveChangesAsync();
             return new DashboardSetup(
                 organization.Id,
                 assessment.Id,
                 profile.Id,
-                partialControl!.Id);
+                partialControl!.Id,
+                surveyTemplate.Id);
         }
 
         public async ValueTask DisposeAsync()
@@ -198,5 +305,11 @@ public sealed class DashboardUiTests
         int OrganizationId,
         int AssessmentId,
         int ProfileId,
-        int PartialControlId);
+        int PartialControlId,
+        int SurveyTemplateId);
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
+    }
 }
