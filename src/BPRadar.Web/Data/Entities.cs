@@ -82,6 +82,79 @@ public sealed class Organization
     public ICollection<Issue> Issues { get; } = [];
 }
 
+public enum ComplianceStatus
+{
+    NotAssessed,
+    Compliant,
+    Partial,
+    NonCompliant,
+    NotApplicable
+}
+
+public enum ResultSource
+{
+    Manual,
+    Import
+}
+
+public sealed class Assessment
+{
+    public int Id { get; set; }
+    public int OrganizationId { get; set; }
+    public int FrameworkId { get; set; }
+    public int? BaselineProfileId { get; set; }
+    public required string Label { get; set; }
+    public DateTime SnapshotDate { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public Organization Organization { get; set; } = null!;
+    public Framework Framework { get; set; } = null!;
+    public BaselineProfile? BaselineProfile { get; set; }
+    public ICollection<AssessmentResult> Results { get; } = [];
+}
+
+public sealed class AssessmentResult
+{
+    public int Id { get; set; }
+    public int AssessmentId { get; set; }
+    public int ControlId { get; set; }
+    public ComplianceStatus Status { get; set; }
+    public decimal? Score { get; set; }
+    public string? Notes { get; set; }
+    public string? EvidenceUrl { get; set; }
+    public ResultSource Source { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public Assessment Assessment { get; set; } = null!;
+    public Control Control { get; set; } = null!;
+}
+
+public sealed class BaselineProfile
+{
+    public int Id { get; set; }
+    public int OrganizationId { get; set; }
+    public required string Name { get; set; }
+    public string? Description { get; set; }
+    public bool IsDefault { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public Organization Organization { get; set; } = null!;
+    public ICollection<BaselineTarget> Targets { get; } = [];
+}
+
+public sealed class BaselineTarget
+{
+    public int Id { get; set; }
+    public int BaselineProfileId { get; set; }
+    public int FrameworkId { get; set; }
+    public int? DomainId { get; set; }
+    public decimal? TargetCompliancePercent { get; set; }
+    public decimal? TargetScore { get; set; }
+    public string? Notes { get; set; }
+    public BaselineProfile BaselineProfile { get; set; } = null!;
+    public Framework Framework { get; set; } = null!;
+    public Domain? Domain { get; set; }
+}
+
 public enum IssueMatchingStatus
 {
     Pending,

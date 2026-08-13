@@ -40,7 +40,7 @@ app.MapIssueEndpoints();
 app.MapPost(
     "/api/issue-matching/candidates",
     IssueMatchingEndpoint.MatchCandidatesAsync);
-app.MapGet("/", () => Results.Redirect("/Admin/SurveyTemplates"));
+app.MapGet("/", () => Results.Redirect("/Assessments"));
 app.Run();
 
 public partial class Program;
