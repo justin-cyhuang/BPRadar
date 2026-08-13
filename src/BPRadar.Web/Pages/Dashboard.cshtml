@@ -302,19 +302,19 @@
                 <h3>@tracking.SurveyTemplateName</h3>
                 <div class="survey-summary">
                     <article>
-                        <h4>Latest profile</h4>
+                        <h4>Latest Self-Reported State</h4>
                         <strong>
                             @(tracking.LatestScore is null
                                 ? "No scored submissions"
-                                : $"{tracking.LatestScore.Value:0.#}% profile score")
+                                : $"{tracking.LatestScore.Value:0.#}% survey score")
                         </strong>
                     </article>
                     <article>
-                        <h4>Change</h4>
+                        <h4>Self-Reported State change</h4>
                         <strong>
                             @(tracking.LatestDelta is null
-                                ? "No previous score"
-                                : $"{tracking.LatestDelta.Value:+0.#;-0.#;0} points vs previous")
+                                ? "No previous survey score"
+                                : $"{tracking.LatestDelta.Value:+0.#;-0.#;0} points vs previous survey")
                         </strong>
                     </article>
                     <article>
@@ -339,56 +339,11 @@
                 {
                     <div class="survey-trend-layout">
                         <div class="chart-container">
-                            <h3>Profile score trend</h3>
-                            <svg
-                                id="survey-trend"
-                                class="trend-chart"
-                                viewBox="0 0 600 240"
-                                role="img"
-                                aria-labelledby="trend-title trend-description">
-                                <title id="trend-title">Survey profile score trend</title>
-                                <desc id="trend-description">
-                                    Profile scores by survey snapshot date, from zero to one hundred percent.
-                                </desc>
-                                @foreach (var level in new[] { 0, 25, 50, 75, 100 })
-                                {
-                                    <line
-                                        class="trend-grid"
-                                        x1="60"
-                                        y1="@TrendY(level)"
-                                        x2="560"
-                                        y2="@TrendY(level)" />
-                                    @SvgText(
-                                        "trend-label",
-                                        "52",
-                                        (TrendY(level) + 4).ToString(
-                                            "0.##",
-                                            CultureInfo.InvariantCulture),
-                                        $"{level}%",
-                                        "end")
-                                }
-                                @if (tracking.Trend.Length > 1)
-                                {
-                                    <polyline
-                                        class="trend-line"
-                                        points="@TrendPoints(tracking.Trend)" />
-                                }
-                                @for (var index = 0; index < tracking.Trend.Length; index++)
-                                {
-                                    var point = tracking.Trend[index];
-                                    <circle
-                                        class="trend-point"
-                                        data-score="@point.Score.ToString("0.##", CultureInfo.InvariantCulture)"
-                                        cx="@TrendX(index, tracking.Trend.Length)"
-                                        cy="@TrendY(point.Score)"
-                                        r="5">
-                                        <title>
-                                            @point.SnapshotDate.ToString("yyyy-MM-dd"):
-                                            @point.Score.ToString("0.#")%
-                                        </title>
-                                    </circle>
-                                }
-                            </svg>
+                            @await Html.PartialAsync(
+                                "_SurveyTrendChart",
+                                new SurveyTrendChartModel(
+                                    "survey-trend",
+                                    tracking.Trend))
                         </div>
 
                         <div class="table-scroll">

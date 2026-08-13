@@ -115,14 +115,23 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "class=\"radar-series target\"");
         StringAssert.Contains(page, ">Target<");
         StringAssert.Contains(page, "Transformation pulse");
-        StringAssert.Contains(page, "75% profile score");
-        StringAssert.Contains(page, "+25 points vs previous");
+        StringAssert.Contains(page, "Latest Self-Reported State");
+        StringAssert.Contains(page, "75% survey score");
+        StringAssert.Contains(page, "Self-Reported State change");
+        StringAssert.Contains(page, "+25 points vs previous survey");
         StringAssert.Contains(page, "On time");
         StringAssert.Contains(page, "Q3 pulse");
         StringAssert.Contains(page, "Q2 pulse");
         StringAssert.Contains(page, "id=\"survey-trend\"");
+        StringAssert.Contains(page, "Self-Reported State trend");
         StringAssert.Contains(page, "data-score=\"50\"");
         StringAssert.Contains(page, "data-score=\"75\"");
+        StringAssert.Contains(
+            page,
+            "2026-04-01: Self-Reported State score 50%");
+        StringAssert.Contains(
+            page,
+            "2026-07-01: Self-Reported State score 75%");
     }
 
     [TestMethod]
@@ -298,9 +307,25 @@ public sealed class DashboardUiTests
         StringAssert.Contains(report, "id=\"report-radar-chart\"");
         StringAssert.Contains(report, "class=\"radar-series target\"");
         StringAssert.Contains(report, "Survey transformation summary");
-        StringAssert.Contains(report, "75% profile score");
-        StringAssert.Contains(report, "+25 points vs previous");
+        StringAssert.Contains(report, "Latest Self-Reported State");
+        StringAssert.Contains(report, "75% survey score");
+        StringAssert.Contains(report, "Self-Reported State change");
+        StringAssert.Contains(report, "+25 points vs previous survey");
         StringAssert.Contains(report, "id=\"report-survey-trend\"");
+        StringAssert.Contains(report, "Self-Reported State trend");
+        foreach (var level in new[] { 0, 25, 50, 75, 100 })
+        {
+            StringAssert.Contains(report, $">{level}%<");
+        }
+
+        StringAssert.Contains(report, ">2026-04-01<");
+        StringAssert.Contains(report, ">2026-07-01<");
+        StringAssert.Contains(
+            report,
+            "2026-04-01: Self-Reported State score 50%");
+        StringAssert.Contains(
+            report,
+            "2026-07-01: Self-Reported State score 75%");
         StringAssert.Contains(report, "Gap details");
         StringAssert.Contains(report, "EXTRA-001");
         StringAssert.Contains(report, "7 additional gaps are available in the CSV export.");
