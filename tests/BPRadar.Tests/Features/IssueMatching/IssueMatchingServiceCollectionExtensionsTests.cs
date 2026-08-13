@@ -27,4 +27,25 @@ public sealed class IssueMatchingServiceCollectionExtensionsTests
         Assert.IsInstanceOfType<IssueMatchingService>(
             provider.GetRequiredService<IIssueMatchingService>());
     }
+
+    [TestMethod]
+    public void AddIssueMatching_UsesConfiguredOpenAICompatibleProvider()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["IssueMatching:LlmProvider"] = "OpenAICompatible",
+                ["IssueMatching:OpenAICompatible:Endpoint"] =
+                    "https://llm.example.test/v1/chat/completions",
+                ["IssueMatching:OpenAICompatible:Model"] = "test-model"
+            })
+            .Build();
+        var services = new ServiceCollection();
+
+        services.AddIssueMatching(configuration, AppContext.BaseDirectory);
+
+        using var provider = services.BuildServiceProvider();
+        Assert.IsInstanceOfType<OpenAICompatibleKeywordExtractionService>(
+            provider.GetRequiredService<IKeywordExtractionService>());
+    }
 }

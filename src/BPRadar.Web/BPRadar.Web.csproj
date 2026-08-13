@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>BPRadar.Web-42c0c842-b71d-4b88-89ac-e5caa6cf571b</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
