@@ -433,7 +433,7 @@ private static async Task<SurveyResponseLevel?> LatestSurveyResponseAsync(
         .Select(response => (SurveyResponseLevel?)response.ResponseLevel)
         .FirstOrDefaultAsync(cancellationToken);
 
-private static async Task<IssueDetail> ToDetailAsync(
+internal static async Task<IssueDetail> ToDetailAsync(
     BPRadarDbContext dbContext,
     Issue issue,
     CancellationToken cancellationToken)
