@@ -105,6 +105,7 @@ public sealed class BPRadarDbContext(DbContextOptions<BPRadarDbContext> options)
                 .HasConversion<string>()
                 .HasMaxLength(20);
             entity.Property(result => result.Score).HasPrecision(10, 2);
+            entity.Property(result => result.ExternalRecordId).HasMaxLength(200);
             entity.HasIndex(result => new
             {
                 result.AssessmentId,

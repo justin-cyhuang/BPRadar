@@ -29,6 +29,7 @@
                     <th>Label</th>
                     <th>Snapshot date</th>
                     <th>Completion</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -40,6 +41,9 @@
                         <td><a href="/Assessments/@assessment.Id">@assessment.Label</a></td>
                         <td>@assessment.SnapshotDate.ToString("yyyy-MM-dd")</td>
                         <td>@assessment.CompletionPercent.ToString("0.#")%</td>
+                        <td>
+                            <a href="/Assessments/@assessment.Id/Import">Import results</a>
+                        </td>
                     </tr>
                 }
             </tbody>

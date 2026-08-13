@@ -2,6 +2,7 @@ using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.IssueMatching;
 using BPRadar.Web.Features.Issues;
+using BPRadar.Web.Features.Import;
 using BPRadar.Web.Features.ManualEntry;
 using BPRadar.Web.Features.Surveys;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +14,10 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<BPRadarDbContext>(
     options => options.UseSqlite(connectionString));
 builder.Services.AddRazorPages();
+builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<ImportSessionStore>();
+builder.Services.AddScoped<AssessmentImportService>();
 builder.Services.AddIssueMatching(
     builder.Configuration,
     builder.Environment.ContentRootPath);
