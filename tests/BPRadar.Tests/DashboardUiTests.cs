@@ -121,6 +121,38 @@ public sealed class DashboardUiTests
         StringAssert.Contains(page, "data-score=\"75\"");
     }
 
+    [TestMethod]
+    public async Task Dashboard_renders_only_configured_partial_target_markers()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&assessmentIds={setup.UntargetedAssessmentId}" +
+            $"&baselineProfileId={setup.ProfileId}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(page, "class=\"radar-target-point\"");
+        StringAssert.Contains(
+            page,
+            $"data-target-framework-id=\"{setup.TargetedFrameworkId}\"");
+        Assert.IsFalse(
+            page.Contains(
+                $"data-target-framework-id=\"{setup.UntargetedFrameworkId}\"",
+                StringComparison.Ordinal));
+        Assert.IsFalse(
+            page.Contains(
+                "class=\"radar-series target\"",
+                StringComparison.Ordinal));
+        StringAssert.Contains(
+            page,
+            "Target markers appear only on frameworks with a configured target.");
+    }
+
     private sealed class DashboardApplication(
         string databasePath,
         WebApplicationFactory<Program> factory) : IAsyncDisposable
@@ -234,6 +266,21 @@ public sealed class DashboardUiTests
                 Framework = framework,
                 TargetCompliancePercent = 80m
             });
+            var untargetedFramework = new Framework
+            {
+                Name = "Untargeted Framework",
+                Version = "1.0",
+                Description = "Dashboard framework without a baseline target"
+            };
+            var untargetedAssessment = new Assessment
+            {
+                Organization = organization,
+                Framework = untargetedFramework,
+                Label = "Untargeted review",
+                SnapshotDate = now.Date,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
             var surveyTemplate = new SurveyTemplate
             {
                 Name = "Transformation pulse",
@@ -282,6 +329,7 @@ public sealed class DashboardUiTests
             });
             dbContext.AddRange(
                 assessment,
+                untargetedAssessment,
                 profile,
                 previousSubmission,
                 latestSubmission);
@@ -291,7 +339,10 @@ public sealed class DashboardUiTests
                 assessment.Id,
                 profile.Id,
                 partialControl!.Id,
-                surveyTemplate.Id);
+                surveyTemplate.Id,
+                framework.Id,
+                untargetedAssessment.Id,
+                untargetedFramework.Id);
         }
 
         public async ValueTask DisposeAsync()
@@ -306,7 +357,10 @@ public sealed class DashboardUiTests
         int AssessmentId,
         int ProfileId,
         int PartialControlId,
-        int SurveyTemplateId);
+        int SurveyTemplateId,
+        int TargetedFrameworkId,
+        int UntargetedAssessmentId,
+        int UntargetedFrameworkId);
 
     private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
     {

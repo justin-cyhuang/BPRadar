@@ -204,9 +204,44 @@
                         }
                         @if (dashboard.Radar.TargetSeries is not null)
                         {
-                            <polygon
-                                class="radar-series target"
-                                points="@RadarSeriesPoints(dashboard.Radar.TargetSeries.Values)" />
+                            var targetValues = dashboard.Radar.TargetSeries.Values;
+                            @if (targetValues.All(value => value is not null))
+                            {
+                                <polygon
+                                    class="radar-series target"
+                                    points="@RadarSeriesPoints(targetValues)" />
+                            }
+                            else
+                            {
+                                @for (var index = 0; index < targetValues.Length; index++)
+                                {
+                                    var targetValue = targetValues[index];
+                                    if (targetValue is null)
+                                    {
+                                        continue;
+                                    }
+
+                                    <circle
+                                        class="radar-target-point"
+                                        data-target-framework-id="@dashboard.Radar.Axes[index].FrameworkId"
+                                        cx="@RadarValueCoordinate(
+                                            index,
+                                            targetValues.Length,
+                                            targetValue.Value,
+                                            xCoordinate: true)"
+                                        cy="@RadarValueCoordinate(
+                                            index,
+                                            targetValues.Length,
+                                            targetValue.Value,
+                                            xCoordinate: false)"
+                                        r="6">
+                                        <title>
+                                            @dashboard.Radar.Axes[index].Label target:
+                                            @targetValue.Value.ToString("0.#")%
+                                        </title>
+                                    </circle>
+                                }
+                            }
                         }
                     </svg>
                     <ul class="chart-legend" aria-label="Radar chart legend">
@@ -227,6 +262,12 @@
                             </li>
                         }
                     </ul>
+                    @if (dashboard.Radar.TargetSeries?.Values.Any(value => value is null) == true)
+                    {
+                        <p class="chart-note">
+                            Target markers appear only on frameworks with a configured target.
+                        </p>
+                    }
                 </div>
             }
         </section>
@@ -547,13 +588,30 @@
     private const double RadarRadius = 160;
 
     private static string RadarGridPoints(int axisCount, decimal level) =>
-        RadarSeriesPoints(Enumerable.Repeat(level, axisCount).ToArray());
+        RadarSeriesPoints(
+            Enumerable.Repeat<decimal?>(level, axisCount).ToArray());
 
-    private static string RadarSeriesPoints(IReadOnlyList<decimal> values) =>
+    private static string RadarSeriesPoints(IReadOnlyList<decimal?> values) =>
         string.Join(
             " ",
             values.Select((value, index) =>
-                RadarPoint(index, values.Count, RadarRadius * (double)value / 100d)));
+                RadarPoint(
+                    index,
+                    values.Count,
+                    RadarRadius * (double)value!.Value / 100d)));
+
+    private static string RadarValueCoordinate(
+        int index,
+        int count,
+        decimal value,
+        bool xCoordinate)
+    {
+        var point = RadarPoint(
+            index,
+            count,
+            RadarRadius * (double)value / 100d).Split(',');
+        return xCoordinate ? point[0] : point[1];
+    }
 
     private static string RadarPoint(int index, int count, double radius)
     {

@@ -197,7 +197,7 @@ public static class DashboardService
                         radarScoreByAssessmentId.TryGetValue(
                             assessment.Id,
                             out var score)
-                                ? score
+                                ? (decimal?)score
                                 : 0m)
                     .ToArray()))
             .ToArray();
@@ -207,7 +207,12 @@ public static class DashboardService
                 null,
                 "Target",
                 radarAxes
-                    .Select(axis => targetByFrameworkId.GetValueOrDefault(axis.FrameworkId))
+                    .Select(axis =>
+                        targetByFrameworkId.TryGetValue(
+                            axis.FrameworkId,
+                            out var target)
+                                ? (decimal?)target
+                                : null)
                     .ToArray(),
                 IsTarget: true);
         var radar = new RadarChart(
@@ -526,7 +531,7 @@ public sealed record RadarAxis(int FrameworkId, string Label);
 public sealed record RadarSeries(
     int? AssessmentId,
     string Label,
-    decimal[] Values,
+    decimal?[] Values,
     bool IsTarget = false);
 
 public sealed record SurveyTracking(

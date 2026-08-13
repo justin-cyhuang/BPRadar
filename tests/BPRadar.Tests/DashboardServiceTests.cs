@@ -174,6 +174,55 @@ public sealed class DashboardServiceTests
     }
 
     [TestMethod]
+    public async Task Radar_target_preserves_missing_framework_target_as_undefined()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var first = await database.CreateAssessmentAsync([ComplianceStatus.Compliant]);
+        var organization = await database.Context.Organizations
+            .SingleAsync(organization => organization.Id == first.OrganizationId);
+        var secondFramework = new Framework
+        {
+            Name = "Untargeted Framework",
+            Version = "1.0",
+            Description = "Framework without a configured target"
+        };
+        var secondAssessment = new Assessment
+        {
+            Organization = organization,
+            Framework = secondFramework,
+            Label = "Untargeted review",
+            SnapshotDate = new DateTime(2026, 8, 1),
+            CreatedAt = new DateTime(2026, 8, 1),
+            UpdatedAt = new DateTime(2026, 8, 2)
+        };
+        var profile = new BaselineProfile
+        {
+            Organization = organization,
+            Name = "Partial target",
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        profile.Targets.Add(new BaselineTarget
+        {
+            FrameworkId = first.FrameworkId,
+            TargetCompliancePercent = 70m
+        });
+        database.Context.AddRange(secondAssessment, profile);
+        await database.Context.SaveChangesAsync();
+
+        var dashboard = await DashboardService.GetAsync(
+            database.Context,
+            new DashboardRequest(
+                first.OrganizationId,
+                [first.AssessmentId, secondAssessment.Id],
+                profile.Id));
+
+        CollectionAssert.AreEqual(
+            new decimal?[] { 70m, null },
+            dashboard.Radar.TargetSeries!.Values);
+    }
+
+    [TestMethod]
     public async Task Survey_tracking_scores_weighted_history_deltas_domains_and_reuses_cadence()
     {
         await using var database = await TestDatabase.CreateAsync();
