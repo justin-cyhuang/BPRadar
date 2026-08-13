@@ -133,6 +133,7 @@ match it (update this spec first if the model needs to change).
 | Score | decimal? | optional numeric score, e.g. 0–100 or 0–5 maturity |
 | Notes | string? | assessor free-text notes |
 | EvidenceUrl | string? | optional link/reference to evidence |
+| ExternalRecordId | string? | optional source-system identifier from an import |
 | Source | enum `ResultSource` | Manual / Import |
 | UpdatedAt | DateTime | |
 

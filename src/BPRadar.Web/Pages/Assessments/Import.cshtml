@@ -1,0 +1,137 @@
+@page "/Assessments/{assessmentId:int}/Import"
+@model BPRadar.Web.Pages.Assessments.ImportModel
+@using BPRadar.Web.Features.Import
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Import assessment results";
+    Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
+}
+
+<main>
+    <h1>Import assessment results</h1>
+    <p><a href="/Assessments">Back to assessments</a></p>
+    <dl>
+        <dt>Organization</dt>
+        <dd>@Model.Assessment.OrganizationName</dd>
+        <dt>Framework</dt>
+        <dd>@Model.Assessment.FrameworkName @Model.Assessment.FrameworkVersion</dd>
+        <dt>Assessment</dt>
+        <dd>@Model.Assessment.Label (@Model.Assessment.SnapshotDate.ToString("yyyy-MM-dd"))</dd>
+    </dl>
+
+    <div asp-validation-summary="All"></div>
+
+    @if (Model.ImportBatchId == Guid.Empty)
+    {
+        <form method="post" enctype="multipart/form-data" asp-page-handler="Upload">
+            <label asp-for="Upload">CSV or XLSX file</label>
+            <input asp-for="Upload" type="file" accept=".csv,.xlsx" />
+            <span asp-validation-for="Upload"></span>
+            <p>Maximum file size: 5 MB. The first XLSX worksheet is imported.</p>
+            <button type="submit">Upload and map columns</button>
+        </form>
+    }
+    else if (Model.Preview is null)
+    {
+        <form method="post" asp-page-handler="Preview">
+            <input asp-for="ImportBatchId" type="hidden" />
+            <h2>Map columns</h2>
+            <p>Required mappings are marked with an asterisk.</p>
+            @{
+                var groupedMappings = Model.Mappings
+                    .Select((mapping, index) => new { mapping, index })
+                    .GroupBy(item => ImportColumns.Get(item.mapping.LogicalName).Group);
+            }
+            @foreach (var group in groupedMappings)
+            {
+                <fieldset>
+                    <legend>@group.Key</legend>
+                    @foreach (var item in group)
+                    {
+                        var definition = ImportColumns.Get(item.mapping.LogicalName);
+                        <input asp-for="Mappings[item.index].LogicalName" type="hidden" />
+                        <label asp-for="Mappings[item.index].SourceHeader">
+                            @definition.Name@(definition.Required ? " *" : "")
+                        </label>
+                        <select asp-for="Mappings[item.index].SourceHeader">
+                            <option value="">Not mapped</option>
+                            @foreach (var header in Model.Headers)
+                            {
+                                <option value="@header">@header</option>
+                            }
+                        </select>
+                    }
+                </fieldset>
+            }
+            <button type="submit">Preview import</button>
+        </form>
+    }
+    else
+    {
+        <section aria-labelledby="summary-heading">
+            <h2 id="summary-heading">Validation summary</h2>
+            <p>
+                @Model.Preview.RowsRead row(s) read;
+                @Model.Preview.ValidRows valid
+                (@Model.Preview.RowsToCreate create, @Model.Preview.RowsToUpdate update);
+                @Model.Preview.InvalidRows invalid.
+            </p>
+            @if (Model.Preview.Errors.Count > 0)
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Row</th>
+                            <th>Reason</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var error in Model.Preview.Errors)
+                        {
+                            <tr>
+                                <td>@error.RowNumber</td>
+                                <td>@error.ReasonCode</td>
+                                <td>@error.Message</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </section>
+
+        @if (Model.Preview.Rows.Count > 0)
+        {
+            <h2>Valid rows</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Row</th>
+                        <th>Control</th>
+                        <th>Status</th>
+                        <th>Normalized score</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Preview.Rows)
+                    {
+                        <tr>
+                            <td>@row.RowNumber</td>
+                            <td>@row.ControlCode</td>
+                            <td>@row.Status</td>
+                            <td>@(row.Score?.ToString("0.##") ?? "—")</td>
+                            <td>@(row.WillCreate ? "Create" : "Update")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <form method="post" asp-page-handler="Confirm">
+                <input asp-for="ImportBatchId" type="hidden" />
+                <button type="submit">Confirm import</button>
+            </form>
+        }
+        <p><a href="/Assessments/@Model.Assessment.Id/Import">Start over</a></p>
+    }
+</main>

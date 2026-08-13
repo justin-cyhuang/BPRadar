@@ -122,6 +122,7 @@ public sealed class AssessmentResult
     public decimal? Score { get; set; }
     public string? Notes { get; set; }
     public string? EvidenceUrl { get; set; }
+    public string? ExternalRecordId { get; set; }
     public ResultSource Source { get; set; }
     public DateTime UpdatedAt { get; set; }
     public Assessment Assessment { get; set; } = null!;
