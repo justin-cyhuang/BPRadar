@@ -1,0 +1,26 @@
+@page "/Organizations/Baselines"
+@model BPRadar.Web.Pages.Organizations.Baselines.OrganizationsModel
+@{
+    ViewData["Title"] = "Baseline profiles";
+    Layout = "/Pages/Shared/_BaselineLayout.cshtml";
+}
+
+<main>
+    <h1>Baseline profiles</h1>
+    <p>Select an organization to manage its compliance target profiles.</p>
+    @if (Model.Organizations.Count == 0)
+    {
+        <p>No organizations are available.</p>
+    }
+    else
+    {
+        <ul>
+            @foreach (var organization in Model.Organizations)
+            {
+                <li>
+                    <a href="/Organizations/@organization.Id/Baselines">@organization.Name</a>
+                </li>
+            }
+        </ul>
+    }
+</main>

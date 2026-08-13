@@ -1,0 +1,166 @@
+@page "/Organizations/{organizationId:int}/Baselines"
+@model BPRadar.Web.Pages.Organizations.Baselines.IndexModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "Baseline profiles";
+    Layout = "/Pages/Shared/_BaselineLayout.cshtml";
+}
+
+<main>
+    <h1>Baseline profiles for @Model.OrganizationName</h1>
+    <p><a href="/Organizations/Baselines">Choose another organization</a></p>
+
+    @if (Model.ConfirmationMessage is not null)
+    {
+        <p class="confirmation" role="status">@Model.ConfirmationMessage</p>
+    }
+    <div asp-validation-summary="All"></div>
+
+    <form method="post" asp-page-handler="CreateProfile" class="card">
+        <h2>Create profile</h2>
+        <label for="create-name">Name</label>
+        <input id="create-name" name="name" maxlength="200" required />
+        <label for="create-description">Description</label>
+        <textarea id="create-description" name="description"></textarea>
+        <label>
+            <input type="checkbox" name="isDefault" value="true" />
+            Make this the default profile
+        </label>
+        <button type="submit">Create profile</button>
+    </form>
+
+    @if (Model.Profiles.Count == 0)
+    {
+        <p>No baseline profiles have been created for this organization.</p>
+    }
+
+    @foreach (var profile in Model.Profiles)
+    {
+        <section class="card">
+            <h2>
+                @profile.Name
+                @if (profile.IsDefault)
+                {
+                    <span class="default-badge">Default</span>
+                }
+            </h2>
+
+            <details>
+                <summary>Edit profile</summary>
+                <form method="post">
+                    <input type="hidden" name="profileId" value="@profile.Id" />
+                    <label for="profile-name-@profile.Id">Name</label>
+                    <input id="profile-name-@profile.Id" name="name" maxlength="200" value="@profile.Name" required />
+                    <label for="profile-description-@profile.Id">Description</label>
+                    <textarea id="profile-description-@profile.Id" name="description">@profile.Description</textarea>
+                    <label>
+                        <input type="checkbox" name="isDefault" value="true" checked="@profile.IsDefault" />
+                        Make this the default profile
+                    </label>
+                    <button type="submit" asp-page-handler="UpdateProfile">Save profile</button>
+                    <button class="button-danger" type="submit" asp-page-handler="DeleteProfile">Delete profile</button>
+                </form>
+            </details>
+
+            <h3>Targets</h3>
+            @if (profile.Targets.Length == 0)
+            {
+                <p>No targets have been configured.</p>
+            }
+            else
+            {
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Scope</th>
+                            <th>Compliance %</th>
+                            <th>Score</th>
+                            <th>Notes</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var target in profile.Targets)
+                        {
+                            var formId = $"target-form-{target.Id}";
+                            <tr>
+                                <td>
+                                    <label for="framework-@target.Id">Framework</label>
+                                    <select id="framework-@target.Id" name="frameworkId" form="@formId" required>
+                                        @foreach (var framework in Model.Frameworks)
+                                        {
+                                            <option value="@framework.Id" selected="@(framework.Id == target.FrameworkId)">
+                                                @framework.Name @framework.Version
+                                            </option>
+                                        }
+                                    </select>
+                                    <label for="domain-@target.Id">Domain (optional)</label>
+                                    <select id="domain-@target.Id" name="domainId" form="@formId">
+                                        <option value="">Framework-level target</option>
+                                        @foreach (var framework in Model.Frameworks)
+                                        {
+                                            <optgroup label="@framework.Name @framework.Version">
+                                                @foreach (var domain in framework.Domains)
+                                                {
+                                                    <option value="@domain.Id" selected="@(domain.Id == target.DomainId)">
+                                                        @domain.Code - @domain.Name
+                                                    </option>
+                                                }
+                                            </optgroup>
+                                        }
+                                    </select>
+                                </td>
+                                <td><input name="targetCompliancePercent" form="@formId" type="number" min="0" max="100" step="0.01" value="@target.TargetCompliancePercent" /></td>
+                                <td><input name="targetScore" form="@formId" type="number" min="0" max="100" step="0.01" value="@target.TargetScore" /></td>
+                                <td><textarea name="notes" form="@formId">@target.Notes</textarea></td>
+                                <td>
+                                    <form id="@formId" method="post">
+                                        <input type="hidden" name="profileId" value="@profile.Id" />
+                                        <input type="hidden" name="targetId" value="@target.Id" />
+                                        <button type="submit" asp-page-handler="UpdateTarget">Save</button>
+                                        <button class="button-danger" type="submit" asp-page-handler="DeleteTarget">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+
+            <details>
+                <summary>Add target</summary>
+                <form method="post" asp-page-handler="CreateTarget">
+                    <input type="hidden" name="profileId" value="@profile.Id" />
+                    <label for="new-framework-@profile.Id">Framework</label>
+                    <select id="new-framework-@profile.Id" name="frameworkId" required>
+                        <option value="">Select a framework</option>
+                        @foreach (var framework in Model.Frameworks)
+                        {
+                            <option value="@framework.Id">@framework.Name @framework.Version</option>
+                        }
+                    </select>
+                    <label for="new-domain-@profile.Id">Domain (optional)</label>
+                    <select id="new-domain-@profile.Id" name="domainId">
+                        <option value="">Framework-level target</option>
+                        @foreach (var framework in Model.Frameworks)
+                        {
+                            <optgroup label="@framework.Name @framework.Version">
+                                @foreach (var domain in framework.Domains)
+                                {
+                                    <option value="@domain.Id">@domain.Code - @domain.Name</option>
+                                }
+                            </optgroup>
+                        }
+                    </select>
+                    <label for="new-percent-@profile.Id">Target compliance percent</label>
+                    <input id="new-percent-@profile.Id" name="targetCompliancePercent" type="number" min="0" max="100" step="0.01" />
+                    <label for="new-score-@profile.Id">Target score</label>
+                    <input id="new-score-@profile.Id" name="targetScore" type="number" min="0" max="100" step="0.01" />
+                    <label for="new-notes-@profile.Id">Notes</label>
+                    <textarea id="new-notes-@profile.Id" name="notes"></textarea>
+                    <button type="submit">Add target</button>
+                </form>
+            </details>
+        </section>
+    }
+</main>
