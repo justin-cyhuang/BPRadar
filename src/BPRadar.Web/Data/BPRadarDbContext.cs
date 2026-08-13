@@ -11,6 +11,10 @@ public sealed class BPRadarDbContext(DbContextOptions<BPRadarDbContext> options)
     public DbSet<SurveyTemplate> SurveyTemplates => Set<SurveyTemplate>();
     public DbSet<SurveyQuestion> SurveyQuestions => Set<SurveyQuestion>();
     public DbSet<Organization> Organizations => Set<Organization>();
+    public DbSet<Assessment> Assessments => Set<Assessment>();
+    public DbSet<AssessmentResult> AssessmentResults => Set<AssessmentResult>();
+    public DbSet<BaselineProfile> BaselineProfiles => Set<BaselineProfile>();
+    public DbSet<BaselineTarget> BaselineTargets => Set<BaselineTarget>();
     public DbSet<SurveySubmission> SurveySubmissions => Set<SurveySubmission>();
     public DbSet<SurveyResponse> SurveyResponses => Set<SurveyResponse>();
     public DbSet<Issue> Issues => Set<Issue>();
@@ -73,6 +77,90 @@ public sealed class BPRadarDbContext(DbContextOptions<BPRadarDbContext> options)
         modelBuilder.Entity<Organization>(entity =>
         {
             entity.Property(organization => organization.Name).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<Assessment>(entity =>
+        {
+            entity.Property(assessment => assessment.Label).HasMaxLength(200);
+            entity.HasOne(assessment => assessment.Organization)
+                .WithMany()
+                .HasForeignKey(assessment => assessment.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(assessment => assessment.Framework)
+                .WithMany()
+                .HasForeignKey(assessment => assessment.FrameworkId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(assessment => assessment.BaselineProfile)
+                .WithMany()
+                .HasForeignKey(assessment => assessment.BaselineProfileId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<AssessmentResult>(entity =>
+        {
+            entity.Property(result => result.Status)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            entity.Property(result => result.Source)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            entity.Property(result => result.Score).HasPrecision(10, 2);
+            entity.HasIndex(result => new
+            {
+                result.AssessmentId,
+                result.ControlId
+            }).IsUnique();
+            entity.HasOne(result => result.Assessment)
+                .WithMany(assessment => assessment.Results)
+                .HasForeignKey(result => result.AssessmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(result => result.Control)
+                .WithMany()
+                .HasForeignKey(result => result.ControlId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<BaselineProfile>(entity =>
+        {
+            entity.Property(profile => profile.Name).HasMaxLength(200);
+            entity.HasOne(profile => profile.Organization)
+                .WithMany()
+                .HasForeignKey(profile => profile.OrganizationId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BaselineTarget>(entity =>
+        {
+            entity.Property(target => target.TargetCompliancePercent)
+                .HasPrecision(5, 2);
+            entity.Property(target => target.TargetScore).HasPrecision(10, 2);
+            entity.HasIndex(target => new
+            {
+                target.BaselineProfileId,
+                target.FrameworkId,
+                target.DomainId
+            })
+                .IsUnique()
+                .HasFilter("\"DomainId\" IS NOT NULL");
+            entity.HasIndex(target => new
+            {
+                target.BaselineProfileId,
+                target.FrameworkId
+            })
+                .IsUnique()
+                .HasFilter("\"DomainId\" IS NULL");
+            entity.HasOne(target => target.BaselineProfile)
+                .WithMany(profile => profile.Targets)
+                .HasForeignKey(target => target.BaselineProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(target => target.Framework)
+                .WithMany()
+                .HasForeignKey(target => target.FrameworkId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(target => target.Domain)
+                .WithMany()
+                .HasForeignKey(target => target.DomainId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Issue>(entity =>

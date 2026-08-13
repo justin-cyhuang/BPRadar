@@ -1,0 +1,55 @@
+@page "/Assessments/Create"
+@model BPRadar.Web.Pages.Assessments.CreateModel
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{
+    ViewData["Title"] = "New assessment";
+    Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
+}
+
+<main>
+    <h1>New assessment</h1>
+    <p><a href="/Assessments">Back to assessments</a></p>
+
+    <form method="post">
+        <div asp-validation-summary="All"></div>
+
+        <fieldset>
+            <legend>Organization</legend>
+            <label asp-for="Input.OrganizationId">Existing organization</label>
+            <select asp-for="Input.OrganizationId">
+                <option value="">Select an organization</option>
+                @foreach (var organization in Model.Organizations)
+                {
+                    <option value="@organization.Id">@organization.Name</option>
+                }
+            </select>
+            <span asp-validation-for="Input.OrganizationId"></span>
+
+            <p class="separator">or</p>
+
+            <label asp-for="Input.NewOrganizationName">New organization name</label>
+            <input asp-for="Input.NewOrganizationName" />
+            <span asp-validation-for="Input.NewOrganizationName"></span>
+        </fieldset>
+
+        <label asp-for="Input.FrameworkId">Framework</label>
+        <select asp-for="Input.FrameworkId">
+            <option value="">Select a framework</option>
+            @foreach (var framework in Model.Frameworks)
+            {
+                <option value="@framework.Id">@framework.Name @framework.Version</option>
+            }
+        </select>
+        <span asp-validation-for="Input.FrameworkId"></span>
+
+        <label asp-for="Input.Label"></label>
+        <input asp-for="Input.Label" />
+        <span asp-validation-for="Input.Label"></span>
+
+        <label asp-for="Input.SnapshotDate">Snapshot date</label>
+        <input asp-for="Input.SnapshotDate" />
+        <span asp-validation-for="Input.SnapshotDate"></span>
+
+        <button type="submit">Create assessment</button>
+    </form>
+</main>

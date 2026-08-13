@@ -1,0 +1,48 @@
+@page "/Assessments"
+@model BPRadar.Web.Pages.Assessments.IndexModel
+@{
+    ViewData["Title"] = "Assessments";
+    Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
+}
+
+<main>
+    <h1>Assessments</h1>
+    <p>Track point-in-time compliance reviews for each organization and framework.</p>
+    <p><a class="button" href="/Assessments/Create">New assessment</a></p>
+
+    @if (Model.ConfirmationMessage is not null)
+    {
+        <p class="confirmation" role="status">@Model.ConfirmationMessage</p>
+    }
+
+    @if (Model.Assessments.Count == 0)
+    {
+        <p>No assessments have been created.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Organization</th>
+                    <th>Framework</th>
+                    <th>Label</th>
+                    <th>Snapshot date</th>
+                    <th>Completion</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var assessment in Model.Assessments)
+                {
+                    <tr>
+                        <td>@assessment.OrganizationName</td>
+                        <td>@assessment.FrameworkName @assessment.FrameworkVersion</td>
+                        <td>@assessment.Label</td>
+                        <td>@assessment.SnapshotDate.ToString("yyyy-MM-dd")</td>
+                        <td>@assessment.CompletionPercent.ToString("0.#")%</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</main>
