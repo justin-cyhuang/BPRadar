@@ -1,0 +1,261 @@
+@page "/Dashboard"
+@model BPRadar.Web.Pages.DashboardModel
+@using BPRadar.Web.Data
+@using BPRadar.Web.Features.Dashboard
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "/Pages/Shared/_AssessmentLayout.cshtml";
+}
+
+<main>
+    <h1>Dashboard</h1>
+    <p>Review assessment coverage, compliance, targets, and remediation gaps.</p>
+
+    @if (Model.Organizations.Length == 0)
+    {
+        <p>No assessments are available. <a href="/Assessments/Create">Create an assessment</a> to begin.</p>
+    }
+    else
+    {
+        var dashboard = Model.Dashboard!;
+        <form method="get" class="scope-selector">
+            <h2>Scope</h2>
+            <label>
+                Organization
+                <select name="OrganizationId" onchange="this.form.submit()">
+                    @foreach (var organization in Model.Organizations)
+                    {
+                        <option
+                            value="@organization.Id"
+                            selected="@(organization.Id == Model.OrganizationId)">
+                            @organization.Name
+                        </option>
+                    }
+                </select>
+            </label>
+
+            <fieldset>
+                <legend>Assessments</legend>
+                @foreach (var assessment in dashboard.AssessmentOptions)
+                {
+                    var selected = dashboard.SelectedAssessmentIds.Contains(assessment.Id);
+                    <label class="checkbox-label">
+                        <input
+                            type="checkbox"
+                            name="AssessmentIds"
+                            value="@assessment.Id"
+                            checked="@selected" />
+                        <span>
+                            @assessment.FrameworkName @assessment.FrameworkVersion —
+                            @assessment.Label (@assessment.SnapshotDate.ToString("yyyy-MM-dd"))
+                        </span>
+                    </label>
+                }
+            </fieldset>
+
+            <label>
+                Baseline / Target Profile
+                <select name="BaselineProfileId">
+                    <option value="">No baseline</option>
+                    @foreach (var profile in dashboard.BaselineOptions)
+                    {
+                        <option
+                            value="@profile.Id"
+                            selected="@(profile.Id == dashboard.SelectedBaselineProfileId)">
+                            @profile.Name@(profile.IsDefault ? " (default)" : "")
+                        </option>
+                    }
+                </select>
+            </label>
+            <button type="submit">Apply scope</button>
+        </form>
+
+        <section aria-labelledby="overview-heading">
+            <h2 id="overview-heading">Overview</h2>
+            @if (dashboard.Overviews.Length == 0)
+            {
+                <p>Select at least one assessment.</p>
+            }
+            else
+            {
+                <div class="overview-grid">
+                    @foreach (var overview in dashboard.Overviews)
+                    {
+                        <article class="overview-card" data-overview-assessment-id="@overview.AssessmentId">
+                            <h3>@overview.FrameworkName @overview.FrameworkVersion</h3>
+                            <p>@overview.AssessmentLabel</p>
+                            <dl>
+                                <div>
+                                    <dt>Completion</dt>
+                                    <dd>@overview.CompletionPercent.ToString("0.#")% completion</dd>
+                                </div>
+                                <div>
+                                    <dt>Compliance</dt>
+                                    <dd>@overview.CompliancePercent.ToString("0.#")% compliance</dd>
+                                </div>
+                                <div>
+                                    <dt>Gap count</dt>
+                                    <dd>@overview.GapCount gaps</dd>
+                                </div>
+                                @if (overview.TargetCompliancePercent is not null)
+                                {
+                                    <div>
+                                        <dt>Target</dt>
+                                        <dd>@overview.TargetCompliancePercent.Value.ToString("0.#")% target</dd>
+                                    </div>
+                                    <div>
+                                        <dt>Delta</dt>
+                                        <dd>@overview.TargetDelta!.Value.ToString("+0.#;-0.#;0")% vs target</dd>
+                                    </div>
+                                }
+                            </dl>
+                            <p class="timestamp">
+                                Last updated @overview.UpdatedAt.ToString("yyyy-MM-dd HH:mm 'UTC'")
+                            </p>
+                        </article>
+                    }
+                </div>
+            }
+        </section>
+
+        <section aria-labelledby="gaps-heading">
+            <h2 id="gaps-heading">Gap drill-down</h2>
+            <form method="get" class="gap-filters">
+                <input type="hidden" name="OrganizationId" value="@Model.OrganizationId" />
+                @foreach (var assessmentId in dashboard.SelectedAssessmentIds)
+                {
+                    <input type="hidden" name="AssessmentIds" value="@assessmentId" />
+                }
+                <input
+                    type="hidden"
+                    name="BaselineProfileId"
+                    value="@dashboard.SelectedBaselineProfileId" />
+
+                <label>
+                    Framework
+                    <select name="FrameworkId">
+                        <option value="">All frameworks</option>
+                        @foreach (var framework in dashboard.FrameworkFilters)
+                        {
+                            <option value="@framework.Id" selected="@(framework.Id == Model.FrameworkId)">
+                                @framework.Name @framework.Version
+                            </option>
+                        }
+                    </select>
+                </label>
+                <label>
+                    Domain
+                    <select name="DomainId">
+                        <option value="">All domains</option>
+                        @foreach (var framework in dashboard.FrameworkFilters)
+                        {
+                            @foreach (var domain in framework.Domains)
+                            {
+                                <option value="@domain.Id" selected="@(domain.Id == Model.DomainId)">
+                                    @framework.Name — @domain.Code @domain.Name
+                                </option>
+                            }
+                        }
+                    </select>
+                </label>
+                <label>
+                    Status
+                    <select name="GapStatus">
+                        <option value="">All gap statuses</option>
+                        <option
+                            value="Partial"
+                            selected="@(Model.GapStatus == ComplianceStatus.Partial)">
+                            Partial
+                        </option>
+                        <option
+                            value="NonCompliant"
+                            selected="@(Model.GapStatus == ComplianceStatus.NonCompliant)">
+                            Non-Compliant
+                        </option>
+                    </select>
+                </label>
+                <label>
+                    Sort by
+                    <select name="Sort">
+                        @foreach (var sort in Enum.GetValues<DashboardGapSort>())
+                        {
+                            <option value="@sort" selected="@(sort == Model.Sort)">@sort</option>
+                        }
+                    </select>
+                </label>
+                <label class="checkbox-label">
+                    <input
+                        type="checkbox"
+                        name="SortDescending"
+                        value="true"
+                        checked="@Model.SortDescending" />
+                    <span>Descending</span>
+                </label>
+                <button type="submit">Apply filters</button>
+            </form>
+
+            @if (dashboard.Gaps.Length == 0)
+            {
+                <p>No gaps match the selected scope and filters.</p>
+            }
+            else
+            {
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Framework</th>
+                                <th>Domain</th>
+                                <th>Control Code</th>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Score</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gap in dashboard.Gaps)
+                            {
+                                var controlUrl =
+                                    $"/Assessments/{gap.AssessmentId}#control-{gap.ControlId}";
+                                <tr
+                                    class="gap-row"
+                                    data-href="@controlUrl"
+                                    tabindex="0"
+                                    aria-label="Open @gap.ControlCode in @gap.FrameworkName">
+                                    <td>@gap.FrameworkName @gap.FrameworkVersion</td>
+                                    <td>@gap.DomainCode — @gap.DomainName</td>
+                                    <td>
+                                        <a href="@controlUrl">
+                                            @gap.ControlCode
+                                        </a>
+                                    </td>
+                                    <td>@gap.Title</td>
+                                    <td>@(gap.Status == ComplianceStatus.NonCompliant ? "Non-Compliant" : "Partial")</td>
+                                    <td>@(gap.Score?.ToString("0.##") ?? "—")</td>
+                                    <td>@gap.Notes</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </section>
+    }
+</main>
+
+<script>
+    document.querySelectorAll(".gap-row").forEach(row => {
+        row.addEventListener("click", event => {
+            if (!event.target.closest("a")) {
+                window.location.assign(row.dataset.href);
+            }
+        });
+        row.addEventListener("keydown", event => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                window.location.assign(row.dataset.href);
+            }
+        });
+    });
+</script>
