@@ -2,6 +2,7 @@
 @model BPRadar.Web.Pages.DashboardReportModel
 @using BPRadar.Web.Data
 @using BPRadar.Web.Features.Dashboard
+@using BPRadar.Web.Features.Reporting
 @using BPRadar.Web.Features.Surveys
 @using Microsoft.AspNetCore.Html
 @using System.Globalization
@@ -37,12 +38,9 @@
         <p><strong>Organization:</strong> @Model.OrganizationName</p>
         <p>
             <strong>Selected assessments:</strong>
-            @string.Join(
-                "; ",
-                dashboard.AssessmentOptions
-                    .Where(option => dashboard.SelectedAssessmentIds.Contains(option.Id))
-                    .Select(option =>
-                        $"{option.FrameworkName} {option.FrameworkVersion} - {option.Label}"))
+            @DashboardAssessmentScopeFormatter.Format(
+                dashboard,
+                DashboardAssessmentScopeLabelMode.Assessments)
         </p>
         <p class="report-metadata">
             Generated @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")

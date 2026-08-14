@@ -98,16 +98,10 @@ public abstract class DashboardExportScopePageModel : PageModel
         DashboardView dashboard,
         string organizationName)
     {
-        var selectedFrameworks = dashboard.AssessmentOptions
-            .Where(option => dashboard.SelectedAssessmentIds.Contains(option.Id))
-            .Select(option => new
-            {
-                option.FrameworkId,
-                DisplayName = $"{option.FrameworkName} {option.FrameworkVersion}"
-            })
-            .Distinct()
-            .OrderBy(option => option.FrameworkId)
-            .ToArray();
+        var frameworkIds = DashboardAssessmentScopeFormatter.FrameworkIds(dashboard);
+        var frameworkLabel = DashboardAssessmentScopeFormatter.Format(
+            dashboard,
+            DashboardAssessmentScopeLabelMode.Frameworks);
         var surveyTemplateName = dashboard.SurveyTemplateOptions
             .SingleOrDefault(option =>
                 option.Id == dashboard.SelectedSurveyTemplateId)
@@ -117,8 +111,8 @@ public abstract class DashboardExportScopePageModel : PageModel
             $"OrganizationName={Quoted(organizationName)} " +
             $"AssessmentIds={Ids(dashboard.SelectedAssessmentIds)} " +
             $"BaselineProfileId={Id(dashboard.SelectedBaselineProfileId)} " +
-            $"FrameworkIds={Ids(selectedFrameworks.Select(option => option.FrameworkId))} " +
-            $"Frameworks={Quoted(string.Join(',', selectedFrameworks.Select(option => option.DisplayName)))} " +
+            $"FrameworkIds={Ids(frameworkIds)} " +
+            $"Frameworks={Quoted(frameworkLabel)} " +
             $"DomainId={Id(DomainId)} " +
             $"SurveyTemplateId={Id(dashboard.SelectedSurveyTemplateId)} " +
             $"SurveyTemplateName={Quoted(surveyTemplateName)}";
