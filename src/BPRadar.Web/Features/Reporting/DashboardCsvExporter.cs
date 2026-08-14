@@ -17,12 +17,12 @@ public static class DashboardCsvExporter
         var csv = new StringBuilder();
         AddSection(csv, "Report Metadata");
         AddRow(csv, "Organization", organizationName);
-        AddRow(csv, "Selected Assessments", string.Join(
-            "; ",
-            dashboard.AssessmentOptions
-                .Where(option => dashboard.SelectedAssessmentIds.Contains(option.Id))
-                .Select(option =>
-                    $"{option.FrameworkName} {option.FrameworkVersion} - {option.Label}")));
+        AddRow(
+            csv,
+            "Selected Assessments",
+            DashboardAssessmentScopeFormatter.Format(
+                dashboard,
+                DashboardAssessmentScopeLabelMode.Assessments));
         AddRow(
             csv,
             "Survey Template",
