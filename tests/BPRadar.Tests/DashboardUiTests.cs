@@ -148,6 +148,39 @@ public sealed partial class DashboardUiTests
     }
 
     [TestMethod]
+    public async Task Due_soon_cadence_is_distinct_in_dashboard_print_and_csv()
+    {
+        await using var application = DashboardApplication.Create(
+            new DateTimeOffset(2026, 9, 20, 8, 0, 0, TimeSpan.Zero));
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+        var scope =
+            $"organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}";
+
+        using var dashboardResponse = await client.GetAsync($"/Dashboard?{scope}");
+        using var reportResponse = await client.GetAsync($"/Dashboard/Report?{scope}");
+        using var csvResponse = await client.GetAsync($"/Dashboard?handler=Csv&{scope}");
+
+        Assert.AreEqual(HttpStatusCode.OK, dashboardResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, reportResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.OK, csvResponse.StatusCode);
+        var dashboard = await dashboardResponse.Content.ReadAsStringAsync();
+        var report = await reportResponse.Content.ReadAsStringAsync();
+        var csv = await csvResponse.Content.ReadAsStringAsync();
+        StringAssert.Contains(dashboard, "cadence-status cadence-due-soon");
+        StringAssert.Contains(dashboard, "Due soon");
+        StringAssert.Contains(report, "cadence-status cadence-due-soon");
+        StringAssert.Contains(report, "Due soon");
+        StringAssert.Contains(csv, "Survey Cadence Status,Due soon");
+        Assert.IsFalse(dashboard.Contains("On time", StringComparison.Ordinal));
+        Assert.IsFalse(report.Contains("On time", StringComparison.Ordinal));
+        Assert.IsFalse(
+            csv.Contains("Survey Cadence Status,On time", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
     public async Task Dashboard_renders_only_configured_partial_target_markers()
     {
         await using var application = DashboardApplication.Create();
@@ -577,8 +610,16 @@ public sealed partial class DashboardUiTests
         private readonly string databasePath = databasePath;
         private readonly WebApplicationFactory<Program> factory = factory;
 
-        public static DashboardApplication Create()
+        public static DashboardApplication Create(DateTimeOffset? utcNow = null)
         {
+            utcNow ??= new DateTimeOffset(
+                2026,
+                8,
+                13,
+                8,
+                0,
+                0,
+                TimeSpan.Zero);
             var databasePath = Path.Combine(
                 Path.GetTempPath(),
                 $"bpradar-dashboard-ui-{Guid.NewGuid():N}.db");
@@ -594,15 +635,7 @@ public sealed partial class DashboardUiTests
                             options => options.UseSqlite(
                                 $"Data Source={databasePath};Pooling=False"));
                         services.AddSingleton<TimeProvider>(
-                            new FixedTimeProvider(
-                                new DateTimeOffset(
-                                    2026,
-                                    8,
-                                    13,
-                                    8,
-                                    0,
-                                    0,
-                                    TimeSpan.Zero)));
+                            new FixedTimeProvider(utcNow.Value));
                     });
                 });
             return new DashboardApplication(databasePath, factory);

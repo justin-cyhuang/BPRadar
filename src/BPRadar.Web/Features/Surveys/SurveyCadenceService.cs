@@ -168,3 +168,30 @@ public enum SurveyDueStatus
     DueSoon,
     Overdue
 }
+
+public static class SurveyDueStatusDisplay
+{
+    public static string Label(SurveyDueStatus status) =>
+        status switch
+        {
+            SurveyDueStatus.OnTime => "On time",
+            SurveyDueStatus.DueSoon => "Due soon",
+            SurveyDueStatus.Overdue => "Overdue",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                status,
+                "Unsupported survey due status.")
+        };
+
+    public static string CssClass(SurveyDueStatus status) =>
+        status switch
+        {
+            SurveyDueStatus.OnTime => "cadence-on-time",
+            SurveyDueStatus.DueSoon => "cadence-due-soon",
+            SurveyDueStatus.Overdue => "cadence-overdue",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(status),
+                status,
+                "Unsupported survey due status.")
+        };
+}

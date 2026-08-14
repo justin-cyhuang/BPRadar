@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using BPRadar.Web.Data;
 using BPRadar.Web.Features.Dashboard;
+using BPRadar.Web.Features.Surveys;
 
 namespace BPRadar.Web.Features.Reporting;
 
@@ -27,6 +28,12 @@ public static class DashboardCsvExporter
             csv,
             "Survey Template",
             dashboard.SurveyTracking?.SurveyTemplateName ?? "Not selected");
+        AddRow(
+            csv,
+            "Survey Cadence Status",
+            dashboard.SurveyTracking is null
+                ? "Not available"
+                : SurveyDueStatusDisplay.Label(dashboard.SurveyTracking.CadenceStatus));
         AddRow(csv, "Survey Evidence State", SurveyEvidenceState(dashboard));
         AddRow(csv, "Exported UTC", exportedAtUtc.ToString("O", CultureInfo.InvariantCulture));
         AddRow(csv, "Correlation ID", correlationId);
