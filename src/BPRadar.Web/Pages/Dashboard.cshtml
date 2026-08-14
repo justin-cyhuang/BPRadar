@@ -385,6 +385,7 @@
                                         <th>Profile score</th>
                                         <th>Delta</th>
                                         <th>Key notes</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -400,6 +401,13 @@
                                                     : submission.Delta.Value.ToString("+0.#;-0.#;0"))
                                             </td>
                                             <td>@submission.Notes</td>
+                                            <td>
+                                                <a
+                                                    href="/Organizations/@Model.OrganizationId/Surveys/Submissions/@submission.SubmissionId"
+                                                    aria-label="Review submission @submission.Label">
+                                                    Review
+                                                </a>
+                                            </td>
                                         </tr>
                                     }
                                 </tbody>

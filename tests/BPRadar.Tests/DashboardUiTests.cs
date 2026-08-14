@@ -145,6 +145,51 @@ public sealed partial class DashboardUiTests
         StringAssert.Contains(
             page,
             "2026-07-01: Self-Reported State score 75%");
+        StringAssert.Contains(
+            page,
+            $"href=\"/Organizations/{setup.OrganizationId}/Surveys/Submissions/{setup.LatestSubmissionId}\"");
+        StringAssert.Contains(page, "aria-label=\"Review submission Q3 pulse\"");
+    }
+
+    [TestMethod]
+    public async Task Submission_review_action_renders_the_selected_submission()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Organizations/{setup.OrganizationId}/Surveys/Submissions/{setup.LatestSubmissionId}");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = await response.Content.ReadAsStringAsync();
+        StringAssert.Contains(page, "Review survey submission");
+        StringAssert.Contains(page, "Q3 pulse");
+        StringAssert.Contains(page, "Transformation pulse");
+        StringAssert.Contains(page, "How mature is this capability?");
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "High</td>\\s*<td>75</td>",
+                RegexOptions.CultureInvariant));
+        StringAssert.Contains(page, "75%");
+        StringAssert.Contains(page, "Latest snapshot");
+    }
+
+    [TestMethod]
+    public async Task Submission_review_returns_not_found_for_unknown_or_other_organization()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var unknownResponse = await client.GetAsync(
+            $"/Organizations/{setup.OrganizationId}/Surveys/Submissions/999999");
+        using var otherOrganizationResponse = await client.GetAsync(
+            $"/Organizations/{setup.OtherOrganizationId}/Surveys/Submissions/{setup.LatestSubmissionId}");
+
+        Assert.AreEqual(HttpStatusCode.NotFound, unknownResponse.StatusCode);
+        Assert.AreEqual(HttpStatusCode.NotFound, otherOrganizationResponse.StatusCode);
     }
 
     [TestMethod]
@@ -654,6 +699,7 @@ public sealed partial class DashboardUiTests
             await using var scope = factory.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<BPRadarDbContext>();
             var organization = new Organization { Name = "Contoso" };
+            var otherOrganization = new Organization { Name = "Fabrikam" };
             var framework = new Framework
             {
                 Name = "Test Framework",
@@ -807,7 +853,12 @@ public sealed partial class DashboardUiTests
                 SurveyQuestion = surveyQuestion,
                 ResponseLevel = SurveyResponseLevel.High
             });
-            dbContext.AddRange(assessment, untargetedAssessment, profile, surveyTemplate);
+            dbContext.AddRange(
+                assessment,
+                untargetedAssessment,
+                profile,
+                surveyTemplate,
+                otherOrganization);
             if (includeSurveySubmissions)
             {
                 dbContext.AddRange(previousSubmission, latestSubmission);
@@ -822,7 +873,9 @@ public sealed partial class DashboardUiTests
                 framework.Id,
                 domain.Id,
                 untargetedAssessment.Id,
-                untargetedFramework.Id);
+                untargetedFramework.Id,
+                latestSubmission.Id,
+                otherOrganization.Id);
         }
 
         public async ValueTask DisposeAsync()
@@ -841,7 +894,9 @@ public sealed partial class DashboardUiTests
         int TargetedFrameworkId,
         int DomainId,
         int UntargetedAssessmentId,
-        int UntargetedFrameworkId);
+        int UntargetedFrameworkId,
+        int LatestSubmissionId,
+        int OtherOrganizationId);
 
     internal static async Task<HttpResponseMessage> SubmitGetFormAsync(
         HttpClient client,

@@ -229,6 +229,51 @@ public static class SurveySubmissionService
             .ToArray();
     }
 
+    public static async Task<SurveySubmissionReview?> GetReviewAsync(
+        BPRadarDbContext dbContext,
+        int organizationId,
+        int submissionId,
+        CancellationToken cancellationToken = default)
+    {
+        var submission = await dbContext.SurveySubmissions
+            .AsNoTracking()
+            .Include(item => item.Organization)
+            .Include(item => item.SurveyTemplate)
+            .Include(item => item.Responses)
+            .ThenInclude(response => response.SurveyQuestion)
+            .SingleOrDefaultAsync(
+                item =>
+                    item.Id == submissionId &&
+                    item.OrganizationId == organizationId,
+                cancellationToken);
+        if (submission is null)
+        {
+            return null;
+        }
+
+        return new SurveySubmissionReview(
+            submission.Id,
+            submission.OrganizationId,
+            submission.Organization.Name,
+            submission.SurveyTemplateId,
+            submission.SurveyTemplate.Name,
+            submission.Label,
+            submission.SnapshotDate,
+            submission.SubmittedAt,
+            submission.Notes,
+            SurveyScoringService.CalculateProfileScore(submission.Responses),
+            submission.Responses
+                .OrderBy(response => response.SurveyQuestion.SortOrder)
+                .ThenBy(response => response.SurveyQuestion.Code)
+                .Select(response => new SurveyResponseReview(
+                    response.SurveyQuestion.Code,
+                    response.SurveyQuestion.Prompt,
+                    response.ResponseLevel,
+                    SurveyScoringService.CalculateResponseScore(response),
+                    response.Notes))
+                .ToArray());
+    }
+
     private static SurveySubmissionDetail ToDetail(SurveySubmission submission) =>
         new(
             submission.Id,
@@ -281,6 +326,26 @@ public sealed record SurveyResponseDetail(
     int SurveyQuestionId,
     string QuestionCode,
     string ResponseLevel,
+    decimal? Score,
+    string? Notes);
+
+public sealed record SurveySubmissionReview(
+    int Id,
+    int OrganizationId,
+    string OrganizationName,
+    int SurveyTemplateId,
+    string SurveyTemplateName,
+    string Label,
+    DateTime SnapshotDate,
+    DateTime SubmittedAt,
+    string? Notes,
+    decimal? ProfileScore,
+    SurveyResponseReview[] Responses);
+
+public sealed record SurveyResponseReview(
+    string QuestionCode,
+    string QuestionPrompt,
+    SurveyResponseLevel ResponseLevel,
     decimal? Score,
     string? Notes);
 
