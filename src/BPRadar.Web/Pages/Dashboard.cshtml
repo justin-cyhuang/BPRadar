@@ -554,7 +554,7 @@
                                         </a>
                                     </td>
                                     <td>@gap.Title</td>
-                                    <td>@(gap.Status == ComplianceStatus.NonCompliant ? "Non-Compliant" : "Partial")</td>
+                                    <td>@gap.Status.ToDisplayText()</td>
                                     <td>@(gap.Score?.ToString("0.##") ?? "—")</td>
                                     <td>@gap.Notes</td>
                                 </tr>

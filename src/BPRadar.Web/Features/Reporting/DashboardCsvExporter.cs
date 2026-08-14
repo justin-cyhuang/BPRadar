@@ -74,9 +74,7 @@ public static class DashboardCsvExporter
                 $"{gap.DomainCode} - {gap.DomainName}",
                 gap.ControlCode,
                 gap.Title,
-                gap.Status == ComplianceStatus.NonCompliant
-                    ? "Non-Compliant"
-                    : gap.Status.ToString(),
+                gap.Status.ToDisplayText(),
                 Number(gap.Score),
                 gap.Notes);
         }
