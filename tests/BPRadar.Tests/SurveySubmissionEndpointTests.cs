@@ -270,6 +270,92 @@ public sealed class SurveySubmissionEndpointTests
             "Excellent");
     }
 
+    [TestMethod]
+    public async Task Submission_rejects_scores_outside_the_normalized_range()
+    {
+        await using var application = SurveyApplication.Create();
+        using var client = application.CreateClient();
+        var organizationId = await application.CreateOrganizationAsync("Contoso");
+        var template = await GetActiveTemplateAsync(
+            client,
+            "Azure WAF Transformation Pulse");
+
+        foreach (var invalidScore in new[] { -1m, 101m })
+        {
+            var submission = new
+            {
+                SurveyTemplateId = template.Id,
+                Label = $"Invalid score {invalidScore}",
+                SnapshotDate = DateTime.UtcNow.Date,
+                Notes = (string?)null,
+                Answers = template.Questions
+                    .Select((question, index) => new
+                    {
+                        SurveyQuestionId = question.Id,
+                        ResponseLevel = "High",
+                        Score = index == 0 ? invalidScore : (decimal?)null,
+                        Notes = (string?)null
+                    })
+                    .ToArray()
+            };
+
+            using var response = await client.PostAsJsonAsync(
+                $"/api/organizations/{organizationId}/survey-submissions",
+                submission);
+
+            Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+            var problem = await response.Content
+                .ReadFromJsonAsync<ValidationProblemDetails>();
+            Assert.IsNotNull(problem);
+            StringAssert.Contains(
+                problem.Errors["Answers"].Single(),
+                "between 0 and 100");
+        }
+
+        var latest = await client.GetFromJsonAsync<SurveySubmissionDetail[]>(
+            $"/api/organizations/{organizationId}/survey-submissions/latest");
+        Assert.IsNotNull(latest);
+        Assert.IsEmpty(latest);
+    }
+
+    [TestMethod]
+    public async Task Submission_accepts_normalized_score_boundaries()
+    {
+        await using var application = SurveyApplication.Create();
+        using var client = application.CreateClient();
+        var organizationId = await application.CreateOrganizationAsync("Contoso");
+        var template = await GetActiveTemplateAsync(
+            client,
+            "Azure WAF Transformation Pulse");
+        var submission = new
+        {
+            SurveyTemplateId = template.Id,
+            Label = "Boundary scores",
+            SnapshotDate = DateTime.UtcNow.Date,
+            Notes = (string?)null,
+            Answers = template.Questions
+                .Select((question, index) => new
+                {
+                    SurveyQuestionId = question.Id,
+                    ResponseLevel = "High",
+                    Score = index == 0 ? 0m : index == 1 ? 100m : (decimal?)null,
+                    Notes = (string?)null
+                })
+                .ToArray()
+        };
+
+        using var response = await client.PostAsJsonAsync(
+            $"/api/organizations/{organizationId}/survey-submissions",
+            submission);
+
+        Assert.AreEqual(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content
+            .ReadFromJsonAsync<SurveySubmissionDetail>();
+        Assert.IsNotNull(created);
+        Assert.AreEqual(0m, created.Responses[0].Score);
+        Assert.AreEqual(100m, created.Responses[1].Score);
+    }
+
     private static async Task<SurveyTemplateDetail> GetActiveTemplateAsync(
         HttpClient client,
         string name)
@@ -330,6 +416,7 @@ public sealed class SurveySubmissionEndpointTests
         int SurveyQuestionId,
         string QuestionCode,
         string ResponseLevel,
+        decimal? Score,
         string? Notes);
 
     private sealed class SurveyApplication(

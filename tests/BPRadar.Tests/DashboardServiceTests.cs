@@ -300,7 +300,7 @@ public sealed class DashboardServiceTests
         {
             SurveyQuestion = firstQuestion,
             ResponseLevel = SurveyResponseLevel.Low,
-            Score = 100m
+            Score = 125m
         });
         latest.Responses.Add(new SurveyResponse
         {

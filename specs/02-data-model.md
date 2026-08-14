@@ -120,7 +120,7 @@ match it (update this spec first if the model needs to change).
 | SurveySubmissionId | int (FK → SurveySubmission) | |
 | SurveyQuestionId | int (FK → SurveyQuestion) | |
 | ResponseLevel | enum `SurveyResponseLevel` | VeryLow / Low / Medium / High / VeryHigh / NotApplicable |
-| Score | decimal? | optional numeric override on normalized scale |
+| Score | decimal? | optional numeric override on normalized 0–100 scale; values outside this range are rejected at submission |
 | Notes | string? | optional response note |
 
 ### AssessmentResult
@@ -227,6 +227,8 @@ Issue 1---* ViolationMatch *---1 Control
   domain-level target exists in selected BaselineProfile).
 - **Survey profile score** per SurveySubmission = weighted average of mapped
   question scores (`Weight` from `SurveyQuestion`), normalized to 0–100.
+- Explicit survey response scores are clamped to 0–100 during derived-metric
+  calculation as defense in depth for legacy or directly seeded data.
 - **Survey transformation delta** = current SurveySubmission profile score
   minus the prior submission score for the same Organization+SurveyTemplate.
 - **Survey domain transformation delta** = per-domain score delta between the

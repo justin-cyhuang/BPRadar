@@ -4,6 +4,9 @@ namespace BPRadar.Web.Features.Surveys;
 
 public static class SurveyScoringService
 {
+    public const decimal MinimumScore = 0m;
+    public const decimal MaximumScore = 100m;
+
     public static decimal? CalculateProfileScore(
         IEnumerable<SurveyResponse> responses) =>
         CalculateWeightedScore(responses);
@@ -48,7 +51,12 @@ public static class SurveyScoringService
             return null;
         }
 
-        return response.Score ?? response.ResponseLevel switch
+        if (response.Score is not null)
+        {
+            return Math.Clamp(response.Score.Value, MinimumScore, MaximumScore);
+        }
+
+        return response.ResponseLevel switch
         {
             SurveyResponseLevel.VeryLow => 0m,
             SurveyResponseLevel.Low => 25m,

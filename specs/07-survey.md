@@ -30,7 +30,8 @@ transformation momentum.
 ## Response model
 - Primary answer type: `SurveyResponseLevel`
   (`VeryLow`, `Low`, `Medium`, `High`, `VeryHigh`, `NotApplicable`).
-- Optional numeric score can be stored when needed for normalization.
+- Optional numeric score can be stored when needed for normalization. Explicit
+  scores must be within the inclusive 0–100 range.
 - Optional response note is allowed.
 
 ## Submission workflow
@@ -57,6 +58,7 @@ transformation momentum.
 - Required questions cannot be left unanswered at final submit.
 - Snapshot date must be valid and not later than current UTC date.
 - Submission must belong to existing Organization + active Survey Template.
+- Explicit numeric scores outside 0–100 are rejected before persistence.
 
 ## Tracing requirements
 - Survey operations follow correlation ID rules in `06-tech-stack.md`.
