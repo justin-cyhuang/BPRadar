@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.Dashboard;
@@ -21,6 +22,14 @@ public abstract class DashboardExportScopePageModel : PageModel
     public int? SurveyTemplateId { get; set; }
 
     [BindProperty(SupportsGet = true)]
+    [DataType(DataType.Date)]
+    public DateTime? SurveySubmissionFrom { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    [DataType(DataType.Date)]
+    public DateTime? SurveySubmissionTo { get; set; }
+
+    [BindProperty(SupportsGet = true)]
     public int? FrameworkId { get; set; }
 
     [BindProperty(SupportsGet = true)]
@@ -41,7 +50,21 @@ public abstract class DashboardExportScopePageModel : PageModel
     protected string CorrelationId =>
         BPRadarTrace.CorrelationId ?? HttpContext.TraceIdentifier;
 
-    protected DashboardRequest CreateDashboardRequest(DateTime currentDate)
+    protected bool ValidateSurveyDateRange()
+    {
+        if (SurveySubmissionFrom?.Date > SurveySubmissionTo?.Date)
+        {
+            ModelState.AddModelError(
+                nameof(SurveySubmissionFrom),
+                "Survey submissions from date must be on or before the to date.");
+        }
+
+        return ModelState.IsValid;
+    }
+
+    protected DashboardRequest CreateDashboardRequest(
+        DateTime currentDate,
+        bool includeSurveyDateRange = true)
     {
         if (OrganizationId is null)
         {
@@ -61,7 +84,9 @@ public abstract class DashboardExportScopePageModel : PageModel
             Sort,
             SortDescending,
             SurveyTemplateId,
-            currentDate);
+            currentDate,
+            includeSurveyDateRange ? SurveySubmissionFrom?.Date : null,
+            includeSurveyDateRange ? SurveySubmissionTo?.Date : null);
     }
 
     protected IActionResult ExportScopeNotFound()
@@ -115,11 +140,18 @@ public abstract class DashboardExportScopePageModel : PageModel
             $"Frameworks={Quoted(frameworkLabel)} " +
             $"DomainId={Id(DomainId)} " +
             $"SurveyTemplateId={Id(dashboard.SelectedSurveyTemplateId)} " +
-            $"SurveyTemplateName={Quoted(surveyTemplateName)}";
+            $"SurveyTemplateName={Quoted(surveyTemplateName)} " +
+            $"SurveySubmissionFrom={Date(dashboard.SelectedSurveySubmissionFrom)} " +
+            $"SurveySubmissionTo={Date(dashboard.SelectedSurveySubmissionTo)}";
     }
 
     private static string Id(int? value) =>
         value?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "none";
+
+    private static string Date(DateTime? value) =>
+        value?.ToString(
+            "yyyy-MM-dd",
+            System.Globalization.CultureInfo.InvariantCulture) ?? "none";
 
     private static string Ids(IEnumerable<int> values) =>
         string.Join(

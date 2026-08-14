@@ -34,7 +34,7 @@ public sealed class DashboardReportModel(
             "Reporting",
             "PrintReportStarted",
             $"OrganizationId={OrganizationId?.ToString() ?? "none"}");
-        if (!ModelState.IsValid)
+        if (!ValidateSurveyDateRange())
         {
             return ExportScopeValidationError();
         }

@@ -24,6 +24,18 @@
         var dashboard = Model.Dashboard!;
         <form method="get" class="scope-selector">
             <h2>Scope</h2>
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="validation-summary-errors">
+                    <ul>
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(
+                            entry => entry.Errors))
+                        {
+                            <li>@error.ErrorMessage</li>
+                        }
+                    </ul>
+                </div>
+            }
             <label>
                 Organization
                 <select name="OrganizationId" onchange="this.form.submit()">
@@ -85,6 +97,20 @@
                     }
                 </select>
             </label>
+            <label>
+                Survey submissions from
+                <input
+                    type="date"
+                    name="SurveySubmissionFrom"
+                    value="@Model.SurveySubmissionFrom?.ToString("yyyy-MM-dd")" />
+            </label>
+            <label>
+                Survey submissions to
+                <input
+                    type="date"
+                    name="SurveySubmissionTo"
+                    value="@Model.SurveySubmissionTo?.ToString("yyyy-MM-dd")" />
+            </label>
             <button type="submit">Apply scope</button>
         </form>
 
@@ -108,6 +134,14 @@
                     type="hidden"
                     name="SurveyTemplateId"
                     value="@dashboard.SelectedSurveyTemplateId" />
+                <input
+                    type="hidden"
+                    name="SurveySubmissionFrom"
+                    value="@dashboard.SelectedSurveySubmissionFrom?.ToString("yyyy-MM-dd")" />
+                <input
+                    type="hidden"
+                    name="SurveySubmissionTo"
+                    value="@dashboard.SelectedSurveySubmissionTo?.ToString("yyyy-MM-dd")" />
                 <input type="hidden" name="FrameworkId" value="@Model.FrameworkId" />
                 <input type="hidden" name="DomainId" value="@Model.DomainId" />
                 <input type="hidden" name="GapStatus" value="@Model.GapStatus" />
@@ -605,6 +639,16 @@
             new(
                 "SurveyTemplateId",
                 dashboard.SelectedSurveyTemplateId?.ToString(CultureInfo.InvariantCulture)),
+            new(
+                "SurveySubmissionFrom",
+                dashboard.SelectedSurveySubmissionFrom?.ToString(
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture)),
+            new(
+                "SurveySubmissionTo",
+                dashboard.SelectedSurveySubmissionTo?.ToString(
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture)),
             new("FrameworkId", Model.FrameworkId?.ToString(CultureInfo.InvariantCulture)),
             new("DomainId", Model.DomainId?.ToString(CultureInfo.InvariantCulture)),
             new("GapStatus", Model.GapStatus?.ToString()),

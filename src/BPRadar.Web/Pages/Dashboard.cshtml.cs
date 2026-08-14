@@ -18,8 +18,10 @@ public sealed class DashboardModel(
 
     public async Task OnGetAsync(CancellationToken cancellationToken)
     {
+        var dateRangeIsValid = ValidateSurveyDateRange();
         await LoadDashboardAsync(
             requireRequestedOrganization: false,
+            includeSurveyDateRange: dateRangeIsValid,
             cancellationToken);
     }
 
@@ -32,13 +34,14 @@ public sealed class DashboardModel(
             "Reporting",
             "CsvExportStarted",
             $"OrganizationId={OrganizationId?.ToString() ?? "default"}");
-        if (!ModelState.IsValid)
+        if (!ValidateSurveyDateRange())
         {
             return ExportScopeValidationError();
         }
 
         var scopeFound = await LoadDashboardAsync(
             requireRequestedOrganization: true,
+            includeSurveyDateRange: true,
             cancellationToken);
         if (!scopeFound || Dashboard is null || OrganizationId is null)
         {
@@ -70,6 +73,7 @@ public sealed class DashboardModel(
 
     private async Task<bool> LoadDashboardAsync(
         bool requireRequestedOrganization,
+        bool includeSurveyDateRange,
         CancellationToken cancellationToken)
     {
         var requestedOrganizationId = OrganizationId;
@@ -103,11 +107,19 @@ public sealed class DashboardModel(
 
         Dashboard = await DashboardService.GetAsync(
             dbContext,
-            CreateDashboardRequest(timeProvider.GetUtcNow().UtcDateTime.Date),
+            CreateDashboardRequest(
+                timeProvider.GetUtcNow().UtcDateTime.Date,
+                includeSurveyDateRange),
             cancellationToken);
         AssessmentIds = Dashboard.SelectedAssessmentIds;
         BaselineProfileId = Dashboard.SelectedBaselineProfileId;
         SurveyTemplateId = Dashboard.SelectedSurveyTemplateId;
+        if (includeSurveyDateRange)
+        {
+            SurveySubmissionFrom = Dashboard.SelectedSurveySubmissionFrom;
+            SurveySubmissionTo = Dashboard.SelectedSurveySubmissionTo;
+        }
+
         return true;
     }
 }

@@ -223,7 +223,7 @@ public sealed class DashboardServiceTests
     }
 
     [TestMethod]
-    public async Task Survey_tracking_scores_weighted_history_deltas_domains_and_reuses_cadence()
+    public async Task Survey_tracking_filters_history_trend_and_deltas_by_inclusive_snapshot_dates()
     {
         await using var database = await TestDatabase.CreateAsync();
         var setup = await database.CreateAssessmentAsync([ComplianceStatus.Compliant]);
@@ -268,6 +268,25 @@ public sealed class DashboardServiceTests
         };
         template.Questions.Add(firstQuestion);
         template.Questions.Add(secondQuestion);
+        var old = new SurveySubmission
+        {
+            Organization = organization,
+            SurveyTemplate = template,
+            Label = "Q1 pulse",
+            SnapshotDate = new DateTime(2026, 1, 1),
+            SubmittedAt = new DateTime(2026, 1, 2, 8, 0, 0, DateTimeKind.Utc),
+            Notes = "Old notes"
+        };
+        old.Responses.Add(new SurveyResponse
+        {
+            SurveyQuestion = firstQuestion,
+            ResponseLevel = SurveyResponseLevel.VeryHigh
+        });
+        old.Responses.Add(new SurveyResponse
+        {
+            SurveyQuestion = secondQuestion,
+            ResponseLevel = SurveyResponseLevel.VeryHigh
+        });
         var previous = new SurveySubmission
         {
             Organization = organization,
@@ -307,7 +326,23 @@ public sealed class DashboardServiceTests
             SurveyQuestion = secondQuestion,
             ResponseLevel = SurveyResponseLevel.VeryHigh
         });
-        database.Context.AddRange(previous, latest);
+        var otherTemplate = new SurveyTemplate
+        {
+            Name = "Other pulse",
+            Cadence = SurveyCadence.Monthly,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        var otherSubmission = new SurveySubmission
+        {
+            Organization = organization,
+            SurveyTemplate = otherTemplate,
+            Label = "Other template submission",
+            SnapshotDate = new DateTime(2026, 6, 1),
+            SubmittedAt = new DateTime(2026, 6, 2, 8, 0, 0, DateTimeKind.Utc)
+        };
+        database.Context.AddRange(old, previous, latest, otherSubmission);
         await database.Context.SaveChangesAsync();
 
         var currentDate = new DateTime(2026, 8, 13);
@@ -331,14 +366,79 @@ public sealed class DashboardServiceTests
         Assert.AreEqual(cadence!.Status, tracking.CadenceStatus);
         Assert.AreEqual(new DateTime(2026, 10, 1), tracking.NextDueDate);
         CollectionAssert.AreEqual(
-            new[] { latest.Id, previous.Id },
+            new[] { latest.Id, previous.Id, old.Id },
             tracking.History.Select(item => item.SubmissionId).ToArray());
         CollectionAssert.AreEqual(
-            new[] { 56.25m, 100m },
+            new[] { 100m, 56.25m, 100m },
             tracking.Trend.Select(point => point.Score).ToArray());
         CollectionAssert.AreEqual(
             new[] { 100m, 25m },
             tracking.DomainDeltas.Select(domain => domain.Delta).ToArray());
+
+        var bounded = await DashboardService.GetAsync(
+            database.Context,
+            new DashboardRequest(
+                setup.OrganizationId,
+                [setup.AssessmentId],
+                SurveyTemplateId: template.Id,
+                CurrentDate: currentDate,
+                SurveySubmissionFrom: previous.SnapshotDate,
+                SurveySubmissionTo: latest.SnapshotDate));
+        var boundedTracking = bounded.SurveyTracking!;
+        CollectionAssert.AreEqual(
+            new[] { latest.Id, previous.Id },
+            boundedTracking.History.Select(item => item.SubmissionId).ToArray());
+        CollectionAssert.AreEqual(
+            new[] { 56.25m, 100m },
+            boundedTracking.Trend.Select(point => point.Score).ToArray());
+        CollectionAssert.AreEqual(
+            new[] { 100m, 25m },
+            boundedTracking.DomainDeltas.Select(domain => domain.Delta).ToArray());
+
+        var latestOnly = await DashboardService.GetAsync(
+            database.Context,
+            new DashboardRequest(
+                setup.OrganizationId,
+                [setup.AssessmentId],
+                SurveyTemplateId: template.Id,
+                CurrentDate: currentDate,
+                SurveySubmissionFrom: latest.SnapshotDate));
+        var latestOnlyTracking = latestOnly.SurveyTracking!;
+        CollectionAssert.AreEqual(
+            new[] { latest.Id },
+            latestOnlyTracking.History.Select(item => item.SubmissionId).ToArray());
+        Assert.IsNull(latestOnlyTracking.LatestDelta);
+        Assert.HasCount(0, latestOnlyTracking.DomainDeltas);
+
+        var throughPrevious = await DashboardService.GetAsync(
+            database.Context,
+            new DashboardRequest(
+                setup.OrganizationId,
+                [setup.AssessmentId],
+                SurveyTemplateId: template.Id,
+                CurrentDate: currentDate,
+                SurveySubmissionTo: previous.SnapshotDate));
+        CollectionAssert.AreEqual(
+            new[] { previous.Id, old.Id },
+            throughPrevious.SurveyTracking!.History
+                .Select(item => item.SubmissionId)
+                .ToArray());
+    }
+
+    [TestMethod]
+    public async Task Survey_tracking_rejects_an_inverted_snapshot_date_range()
+    {
+        await using var database = await TestDatabase.CreateAsync();
+        var setup = await database.CreateAssessmentAsync([ComplianceStatus.Compliant]);
+
+        await Assert.ThrowsExactlyAsync<ArgumentException>(() =>
+            DashboardService.GetAsync(
+                database.Context,
+                new DashboardRequest(
+                    setup.OrganizationId,
+                    [setup.AssessmentId],
+                    SurveySubmissionFrom: new DateTime(2026, 8, 1),
+                    SurveySubmissionTo: new DateTime(2026, 7, 1))));
     }
 
     [TestMethod]
