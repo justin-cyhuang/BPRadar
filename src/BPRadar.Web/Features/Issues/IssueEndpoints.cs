@@ -13,16 +13,16 @@ public static class IssueEndpoints
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost(
-            "/api/organizations/{organizationId:int}/issues",
+            "/organizations/{organizationId:int}/issues",
             CreateAsync);
-        endpoints.MapGet("/api/issues/{issueId:int}", GetAsync);
-        endpoints.MapPut("/api/issues/{issueId:int}", UpdateAsync);
+        endpoints.MapGet("/issues/{issueId:int}", GetAsync);
+        endpoints.MapPut("/issues/{issueId:int}", UpdateAsync);
         endpoints.MapGet(
-            "/api/organizations/{organizationId:int}/issues",
+            "/organizations/{organizationId:int}/issues",
             ListAsync);
-        endpoints.MapPost("/api/issues/{issueId:int}/matching", RunMatchingAsync);
+        endpoints.MapPost("/issues/{issueId:int}/matching", RunMatchingAsync);
         endpoints.MapPut(
-            "/api/violation-matches/{violationMatchId:int}/review",
+            "/violation-matches/{violationMatchId:int}/review",
             ReviewAsync);
         return endpoints;
     }

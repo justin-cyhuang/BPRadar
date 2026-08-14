@@ -8,7 +8,7 @@ public static class ManualEntryEndpoints
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPut(
-            "/api/assessments/{assessmentId:int}/results/{controlId:int}",
+            "/assessments/{assessmentId:int}/results/{controlId:int}",
             async (
                 int assessmentId,
                 int controlId,

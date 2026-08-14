@@ -1,3 +1,4 @@
+using BPRadar.Web.Authentication;
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
 using BPRadar.Web.Features.IssueMatching;
@@ -18,6 +19,7 @@ builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 builder.Services.AddSingleton<ImportSessionStore>();
 builder.Services.AddScoped<AssessmentImportService>();
+builder.Services.AddApiKeyAuthentication(builder.Configuration);
 builder.Services.AddIssueMatching(
     builder.Configuration,
     builder.Environment.ContentRootPath);
@@ -26,6 +28,8 @@ var app = builder.Build();
 BPRadarTrace.Configure(builder.Configuration, builder.Environment);
 
 app.UseMiddleware<CorrelationMiddleware>();
+app.UseAuthentication();
+app.UseAuthorization();
 
 await using (var scope = app.Services.CreateAsyncScope())
 {
@@ -40,11 +44,12 @@ await using (var scope = app.Services.CreateAsyncScope())
 }
 
 app.MapRazorPages();
-app.MapSurveyEndpoints();
-app.MapIssueEndpoints();
-app.MapManualEntryEndpoints();
-app.MapPost(
-    "/api/issue-matching/candidates",
+var api = app.MapGroup("/api").RequireAuthorization();
+api.MapSurveyEndpoints();
+api.MapIssueEndpoints();
+api.MapManualEntryEndpoints();
+api.MapPost(
+    "/issue-matching/candidates",
     IssueMatchingEndpoint.MatchCandidatesAsync);
 app.MapGet("/", () => Results.Redirect("/Dashboard"));
 app.Run();
