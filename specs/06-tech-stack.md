@@ -60,6 +60,32 @@ Everything else in the app remains local-only and Microsoft-package-only,
 including the keyword-to-`ControlKeyword` fuzzy matching step in that same
 feature, which is hand-rolled with no new package.
 
+## API-key authentication for `/api/*`
+The MVP ships with no login system, but the JSON `/api/*` surface (all
+`Map{Get,Post,Put,Delete}` minimal-API endpoints, including
+`11-issue-matching.md`'s Issue-creation endpoint) supports an optional
+API-key check so it can later be trusted to accept pushes from an external
+system (e.g. an incident/ticketing tool posting an Issue), without adding a
+full login/roles system.
+
+- **Off by default.** For local/demo use, no key is required.
+- Config keys:
+  - `Api:RequireApiKey` (bool, default `false`) — when `true`, every `/api/*`
+    request must include a valid key.
+  - `Api:ApiKey` (string) — the expected key value; sourced from user
+    secrets/environment, never committed to source control.
+- Request header: `X-Api-Key`. A request to `/api/*` missing the header or
+  presenting the wrong value when `RequireApiKey=true` is rejected with
+  `401 Unauthorized`.
+- Implemented as a custom ASP.NET Core `AuthenticationHandler` (no external
+  identity provider, no `Microsoft.AspNetCore.Identity`) — consistent with
+  the Microsoft-published-packages-only rule and the no-login-system MVP
+  scope; it authenticates the caller, it does not add per-user roles.
+- **Fail fast at startup**: if `Api:RequireApiKey=true` but `Api:ApiKey` is
+  empty/unset, the app must refuse to start rather than silently accepting
+  all requests or silently rejecting all requests at runtime.
+- Razor Pages (the UI) are unaffected — this gate applies only to `/api/*`.
+
 ## Tracing and diagnostics (required)
 - Built-in tracing is mandatory for debuggability, using
   `System.Diagnostics.TraceSource` (source name: `BPRadar`) as the project
@@ -123,7 +149,9 @@ BPRadar/
   .NET SDK, **except** `11-issue-matching.md`'s keyword-extraction call to
   a configured OpenAI-compatible endpoint (see recorded exception above); the
   rest of the app has no external service dependency.
-- No authentication/authorization in MVP (see `00-overview.md` non-goals).
+- No authentication/authorization for the UI in MVP (see `00-overview.md`
+  non-goals). The `/api/*` surface has an optional API-key gate — see
+  "API-key authentication for `/api/*`" below.
 - No telemetry/analytics collection.
 
 ## Out of scope (recap from 00-overview.md)

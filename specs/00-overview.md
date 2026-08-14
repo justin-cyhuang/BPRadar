@@ -53,7 +53,10 @@ out of scope for MVP; see Non-goals.)
 
 ## Non-goals (MVP)
 - **Authentication / authorization / multi-tenant access control** — single
-  local user assumed for MVP.
+  local user assumed for MVP. **Exception:** the `/api/*` surface supports an
+  optional, config-gated API-key check (off by default) so an external system
+  can be trusted to push data (e.g. Issues) once enabled — see
+  `06-tech-stack.md`. This is not a login/roles system for the UI.
 - **Live/automated data pulls** from Microsoft APIs (e.g. Microsoft Defender
   for Cloud Secure Score, Azure Policy compliance) — data entry is manual or
   file-import only in MVP; this is called out as a future enhancement.

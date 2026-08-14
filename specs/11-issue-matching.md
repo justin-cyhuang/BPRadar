@@ -26,8 +26,14 @@ to this feature's keyword extraction step.
   let them confirm or dismiss each candidate match.
 
 ## Scope boundaries
-- **No external ticketing integration.** Issues are entered manually in
-  BPRadar; there is no live pull from an incident/ticketing system.
+- **No external ticketing integration in the sense of a live pull.** BPRadar
+  never polls or reads from an incident/ticketing system. Issues are created
+  through the existing `POST /api/organizations/{organizationId}/issues`
+  endpoint — an admin typing into the UI and an external system pushing a
+  request to that same endpoint are the same code path. Whether an external
+  system is trusted to do that push is governed by `06-tech-stack.md`'s
+  optional, config-gated API-key check (off by default) — not a bespoke
+  integration built for any one ticketing tool.
 - **No root cause analysis in BPRadar.** Root Cause is a field the admin
   copies in from an external RCA process/tool; BPRadar never derives it.
 - **No write-back.** Confirming or dismissing a Violation Match never
