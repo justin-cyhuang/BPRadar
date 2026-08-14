@@ -8,12 +8,12 @@ public static class SurveyEndpoints
         this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet(
-            "/api/admin/survey-templates",
+            "/admin/survey-templates",
             async (BPRadarDbContext dbContext, CancellationToken cancellationToken) =>
                 await SurveyTemplateQueries.ListAsync(dbContext, cancellationToken));
 
         endpoints.MapGet(
-            "/api/admin/survey-templates/{templateId:int}",
+            "/admin/survey-templates/{templateId:int}",
             async (
                 int templateId,
                 BPRadarDbContext dbContext,
@@ -27,7 +27,7 @@ public static class SurveyEndpoints
             });
 
         endpoints.MapPost(
-            "/api/organizations/{organizationId:int}/survey-submissions",
+            "/organizations/{organizationId:int}/survey-submissions",
             async (
                 int organizationId,
                 CreateSurveySubmissionRequest request,
@@ -51,7 +51,7 @@ public static class SurveyEndpoints
             });
 
         endpoints.MapGet(
-            "/api/organizations/{organizationId:int}/survey-submissions/latest",
+            "/organizations/{organizationId:int}/survey-submissions/latest",
             async (
                 int organizationId,
                 BPRadarDbContext dbContext,
