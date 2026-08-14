@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
+using BPRadar.Web.Utilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace BPRadar.Web.Features.ManualEntry;
@@ -150,8 +151,8 @@ public static class ManualEntryService
 
         result.Status = status;
         result.Score = request.Score;
-        result.Notes = NormalizeOptional(request.Notes);
-        result.EvidenceUrl = NormalizeOptional(request.EvidenceUrl);
+        result.Notes = TextNormalization.EmptyToNull(request.Notes);
+        result.EvidenceUrl = TextNormalization.EmptyToNull(request.EvidenceUrl);
         result.Source = ResultSource.Manual;
         result.UpdatedAt = now;
         assessment.UpdatedAt = now;
@@ -219,7 +220,7 @@ public static class ManualEntryService
             ];
         }
 
-        var evidenceUrl = NormalizeOptional(request.EvidenceUrl);
+        var evidenceUrl = TextNormalization.EmptyToNull(request.EvidenceUrl);
         if (evidenceUrl is not null &&
             (!Uri.TryCreate(evidenceUrl, UriKind.Absolute, out var uri) ||
              (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)))
@@ -265,9 +266,6 @@ public static class ManualEntryService
                 domains.Sum(domain => domain.Total)),
             domains);
     }
-
-    private static string? NormalizeOptional(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void TraceRejected(
         long startedAt,
