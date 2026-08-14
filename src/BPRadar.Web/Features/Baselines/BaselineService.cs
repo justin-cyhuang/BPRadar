@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
+using BPRadar.Web.Utilities;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -48,7 +49,7 @@ public static class BaselineService
         {
             OrganizationId = organizationId,
             Name = name.Trim(),
-            Description = NormalizeOptionalText(description),
+            Description = TextNormalization.EmptyToNull(description),
             IsDefault = isDefault,
             CreatedAt = now,
             UpdatedAt = now
@@ -108,7 +109,7 @@ public static class BaselineService
         }
 
         profile.Name = name.Trim();
-        profile.Description = NormalizeOptionalText(description);
+        profile.Description = TextNormalization.EmptyToNull(description);
         profile.IsDefault = isDefault;
         profile.UpdatedAt = DateTime.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -173,7 +174,7 @@ public static class BaselineService
             DomainId = domainId,
             TargetCompliancePercent = targetCompliancePercent,
             TargetScore = targetScore,
-            Notes = NormalizeOptionalText(notes)
+            Notes = TextNormalization.EmptyToNull(notes)
         };
         dbContext.BaselineTargets.Add(target);
         try
@@ -234,7 +235,7 @@ public static class BaselineService
         target.DomainId = domainId;
         target.TargetCompliancePercent = targetCompliancePercent;
         target.TargetScore = targetScore;
-        target.Notes = NormalizeOptionalText(notes);
+        target.Notes = TextNormalization.EmptyToNull(notes);
         try
         {
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -407,9 +408,6 @@ public static class BaselineService
 
     private static BaselineOperationResult DuplicateTargetResult() =>
         BaselineOperationResult.Invalid("Target", DuplicateTargetMessage);
-
-    private static string? NormalizeOptionalText(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static void WriteCompleted(
         string operation,

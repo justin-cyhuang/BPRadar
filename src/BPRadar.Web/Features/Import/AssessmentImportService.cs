@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using BPRadar.Web.Data;
 using BPRadar.Web.Diagnostics;
+using BPRadar.Web.Utilities;
 using Microsoft.EntityFrameworkCore;
 
 namespace BPRadar.Web.Features.Import;
@@ -188,9 +189,9 @@ public sealed class AssessmentImportService(
 
                 result.Status = row.Status;
                 result.Score = row.Score;
-                result.EvidenceUrl = EmptyToNull(row.EvidenceUrl);
-                result.Notes = EmptyToNull(row.Notes);
-                result.ExternalRecordId = EmptyToNull(row.ExternalRecordId);
+                result.EvidenceUrl = TextNormalization.EmptyToNull(row.EvidenceUrl);
+                result.Notes = TextNormalization.EmptyToNull(row.Notes);
+                result.ExternalRecordId = TextNormalization.EmptyToNull(row.ExternalRecordId);
                 result.Source = ResultSource.Import;
                 result.UpdatedAt = now;
             }
@@ -454,9 +455,9 @@ public sealed class AssessmentImportService(
             control.Code,
             status,
             score,
-            EmptyToNull(Value("EvidenceUrl")),
-            EmptyToNull(Value("Notes")),
-            EmptyToNull(Value("ExternalRecordId")),
+            TextNormalization.EmptyToNull(Value("EvidenceUrl")),
+            TextNormalization.EmptyToNull(Value("Notes")),
+            TextNormalization.EmptyToNull(Value("ExternalRecordId")),
             !existingControlIds.Contains(control.Id));
         return errors;
     }
@@ -494,9 +495,6 @@ public sealed class AssessmentImportService(
     private static bool IsKnownScale(string value) =>
         value.Equals("0-100", StringComparison.OrdinalIgnoreCase) ||
         value.Equals("0-5", StringComparison.OrdinalIgnoreCase);
-
-    private static string? EmptyToNull(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static string Counts(ImportPreview preview, int upserted) =>
         $"rowsRead={preview.RowsRead} valid={preview.ValidRows} " +
