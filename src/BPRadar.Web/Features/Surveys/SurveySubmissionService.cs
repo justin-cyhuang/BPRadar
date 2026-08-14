@@ -134,6 +134,22 @@ public static class SurveySubmissionService
                 $"Invalid SurveyResponseLevel values: {string.Join(", ", invalidResponseLevels)}.");
         }
 
+        var invalidScoreQuestionIds = answers
+            .Where(answer =>
+                answer.Score is < SurveyScoringService.MinimumScore or
+                    > SurveyScoringService.MaximumScore)
+            .Select(answer => answer.SurveyQuestionId)
+            .Order()
+            .ToArray();
+        if (invalidScoreQuestionIds.Length > 0)
+        {
+            return SurveySubmissionCreateResult.Invalid(
+                "Answers",
+                $"Scores must be between {SurveyScoringService.MinimumScore:0} and " +
+                $"{SurveyScoringService.MaximumScore:0}. Invalid question IDs: " +
+                $"{string.Join(", ", invalidScoreQuestionIds)}.");
+        }
+
         var questionsById = template.Questions.ToDictionary(question => question.Id);
         var now = DateTime.UtcNow;
         var submission = new SurveySubmission
