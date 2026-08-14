@@ -1,0 +1,57 @@
+@page "/Organizations/{organizationId:int}/Surveys/Submissions/{submissionId:int}"
+@model BPRadar.Web.Pages.Organizations.Surveys.ReviewModel
+@{
+    ViewData["Title"] = $"Review {Model.Submission.Label}";
+    Layout = "/Pages/Shared/_SurveyLayout.cshtml";
+}
+
+<main>
+    <a href="/Dashboard?OrganizationId=@Model.Submission.OrganizationId&SurveyTemplateId=@Model.Submission.SurveyTemplateId">
+        Back to dashboard
+    </a>
+    <h1>Review survey submission</h1>
+    <h2>@Model.Submission.Label</h2>
+
+    <dl class="submission-summary">
+        <dt>Organization</dt>
+        <dd>@Model.Submission.OrganizationName</dd>
+        <dt>Survey template</dt>
+        <dd>@Model.Submission.SurveyTemplateName</dd>
+        <dt>Snapshot date</dt>
+        <dd>@Model.Submission.SnapshotDate.ToString("yyyy-MM-dd")</dd>
+        <dt>Submitted</dt>
+        <dd>@Model.Submission.SubmittedAt.ToString("yyyy-MM-dd HH:mm 'UTC'")</dd>
+        <dt>Profile score</dt>
+        <dd>@(Model.Submission.ProfileScore?.ToString("0.#") ?? "Not scored")@(Model.Submission.ProfileScore is null ? "" : "%")</dd>
+        <dt>Key notes</dt>
+        <dd>@(Model.Submission.Notes ?? "None")</dd>
+    </dl>
+
+    <h2>Answers</h2>
+    <div class="table-scroll">
+        <table>
+            <thead>
+                <tr>
+                    <th scope="col">Question</th>
+                    <th scope="col">Answer</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">Notes</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var response in Model.Submission.Responses)
+                {
+                    <tr>
+                        <td>
+                            <strong>@response.QuestionCode</strong><br />
+                            @response.QuestionPrompt
+                        </td>
+                        <td>@BPRadar.Web.Pages.Organizations.Surveys.ReviewModel.ResponseLevelLabel(response.ResponseLevel)</td>
+                        <td>@(response.Score?.ToString("0.#") ?? "Not scored")</td>
+                        <td>@(response.Notes ?? "None")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</main>

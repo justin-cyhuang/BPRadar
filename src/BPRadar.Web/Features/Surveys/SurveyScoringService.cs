@@ -27,7 +27,7 @@ public static class SurveyScoringService
         var scored = responses
             .Select(response => new
             {
-                Score = EffectiveScore(response),
+                Score = CalculateResponseScore(response),
                 response.SurveyQuestion.Weight
             })
             .Where(item => item.Score is not null && item.Weight > 0m)
@@ -41,7 +41,7 @@ public static class SurveyScoringService
         return scored.Sum(item => item.Score!.Value * item.Weight) / totalWeight;
     }
 
-    private static decimal? EffectiveScore(SurveyResponse response)
+    public static decimal? CalculateResponseScore(SurveyResponse response)
     {
         if (response.ResponseLevel == SurveyResponseLevel.NotApplicable)
         {
