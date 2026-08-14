@@ -42,6 +42,15 @@
                 dashboard,
                 DashboardAssessmentScopeLabelMode.Assessments)
         </p>
+        @if (dashboard.SelectedSurveyTemplateId is not null)
+        {
+            <p>
+                <strong>Survey submission date range:</strong>
+                @(dashboard.SelectedSurveySubmissionFrom?.ToString("yyyy-MM-dd") ?? "All")
+                to
+                @(dashboard.SelectedSurveySubmissionTo?.ToString("yyyy-MM-dd") ?? "All")
+            </p>
+        }
         <p class="report-metadata">
             Generated @Model.GeneratedAtUtc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
             · Correlation ID: @Model.ReportCorrelationId

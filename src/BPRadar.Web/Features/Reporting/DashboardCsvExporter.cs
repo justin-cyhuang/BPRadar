@@ -34,6 +34,14 @@ public static class DashboardCsvExporter
             dashboard.SurveyTracking is null
                 ? "Not available"
                 : SurveyDueStatusDisplay.Label(dashboard.SurveyTracking.CadenceStatus));
+        AddRow(
+            csv,
+            "Survey Submissions From",
+            Date(dashboard.SelectedSurveySubmissionFrom));
+        AddRow(
+            csv,
+            "Survey Submissions To",
+            Date(dashboard.SelectedSurveySubmissionTo));
         AddRow(csv, "Survey Evidence State", SurveyEvidenceState(dashboard));
         AddRow(csv, "Exported UTC", exportedAtUtc.ToString("O", CultureInfo.InvariantCulture));
         AddRow(csv, "Correlation ID", correlationId);
@@ -158,6 +166,9 @@ public static class DashboardCsvExporter
 
     private static string Number(decimal? value) =>
         value?.ToString("0.##", CultureInfo.InvariantCulture) ?? string.Empty;
+
+    private static string Date(DateTime? value) =>
+        value?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) ?? "All";
 
     private static string SurveyEvidenceState(DashboardView dashboard)
     {

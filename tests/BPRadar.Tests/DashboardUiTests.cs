@@ -66,6 +66,8 @@ public sealed partial class DashboardUiTests
         StringAssert.Contains(page, "name=\"FrameworkId\"");
         StringAssert.Contains(page, "name=\"DomainId\"");
         StringAssert.Contains(page, "name=\"GapStatus\"");
+        StringAssert.Contains(page, "name=\"SurveySubmissionFrom\"");
+        StringAssert.Contains(page, "name=\"SurveySubmissionTo\"");
         StringAssert.Contains(page, "Export CSV");
         StringAssert.Contains(page, "Print / Save as PDF");
         StringAssert.Contains(page, "id=\"csv-export\"");
@@ -92,6 +94,61 @@ public sealed partial class DashboardUiTests
             checklist,
             $"id=\"control-{setup.PartialControlId}\"");
         StringAssert.Contains(checklist, "window.location.hash");
+    }
+
+    [TestMethod]
+    public async Task Dashboard_filters_survey_history_by_inclusive_snapshot_dates()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&surveySubmissionFrom=2026-07-01" +
+            "&surveySubmissionTo=2026-07-01");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "name=\"SurveySubmissionFrom\"\\s+value=\"2026-07-01\"",
+                RegexOptions.CultureInvariant));
+        StringAssert.Matches(
+            page,
+            new Regex(
+                "name=\"SurveySubmissionTo\"\\s+value=\"2026-07-01\"",
+                RegexOptions.CultureInvariant));
+        StringAssert.Contains(page, "Q3 pulse");
+        Assert.IsFalse(page.Contains("Q2 pulse", StringComparison.Ordinal));
+        Assert.IsFalse(
+            page.Contains("+25 points vs previous survey", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Dashboard_renders_validation_for_an_inverted_survey_date_range()
+    {
+        await using var application = DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&surveySubmissionFrom=2026-08-01" +
+            "&surveySubmissionTo=2026-07-01");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var page = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Contains(
+            page,
+            "Survey submissions from date must be on or before the to date.");
     }
 
     [TestMethod]

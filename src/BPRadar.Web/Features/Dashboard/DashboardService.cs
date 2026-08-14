@@ -11,6 +11,15 @@ public static class DashboardService
         DashboardRequest request,
         CancellationToken cancellationToken = default)
     {
+        var surveySubmissionFrom = request.SurveySubmissionFrom?.Date;
+        var surveySubmissionTo = request.SurveySubmissionTo?.Date;
+        if (surveySubmissionFrom > surveySubmissionTo)
+        {
+            throw new ArgumentException(
+                "Survey submissions from date must be on or before the to date.",
+                nameof(request));
+        }
+
         var assessmentScope = await dbContext.Assessments
             .AsNoTracking()
             .Where(assessment => assessment.OrganizationId == request.OrganizationId)
@@ -243,14 +252,27 @@ public static class DashboardService
                 selectedSurveyTemplateId.Value,
                 request.CurrentDate?.Date ?? DateTime.UtcNow.Date,
                 cancellationToken);
-            var submissions = await dbContext.SurveySubmissions
+            IQueryable<SurveySubmission> submissionQuery = dbContext.SurveySubmissions
                 .AsNoTracking()
                 .Where(submission =>
                     submission.OrganizationId == request.OrganizationId &&
                     submission.SurveyTemplateId == selectedSurveyTemplateId)
                 .Include(submission => submission.Responses)
                 .ThenInclude(response => response.SurveyQuestion)
-                .ThenInclude(question => question.Domain)
+                .ThenInclude(question => question.Domain);
+            if (surveySubmissionFrom is not null)
+            {
+                submissionQuery = submissionQuery.Where(submission =>
+                    submission.SnapshotDate >= surveySubmissionFrom);
+            }
+
+            if (surveySubmissionTo is not null)
+            {
+                submissionQuery = submissionQuery.Where(submission =>
+                    submission.SnapshotDate <= surveySubmissionTo);
+            }
+
+            var submissions = await submissionQuery
                 .OrderByDescending(submission => submission.SnapshotDate)
                 .ThenByDescending(submission => submission.SubmittedAt)
                 .ThenByDescending(submission => submission.Id)
@@ -406,6 +428,8 @@ public static class DashboardService
             gaps,
             radar,
             selectedSurveyTemplateId,
+            surveySubmissionFrom,
+            surveySubmissionTo,
             surveyTemplateOptions,
             surveyTracking);
     }
@@ -448,7 +472,9 @@ public sealed record DashboardRequest(
     DashboardGapSort Sort = DashboardGapSort.ControlCode,
     bool SortDescending = false,
     int? SurveyTemplateId = null,
-    DateTime? CurrentDate = null);
+    DateTime? CurrentDate = null,
+    DateTime? SurveySubmissionFrom = null,
+    DateTime? SurveySubmissionTo = null);
 
 public sealed record DashboardView(
     int[] SelectedAssessmentIds,
@@ -460,6 +486,8 @@ public sealed record DashboardView(
     DashboardGap[] Gaps,
     RadarChart Radar,
     int? SelectedSurveyTemplateId,
+    DateTime? SelectedSurveySubmissionFrom,
+    DateTime? SelectedSurveySubmissionTo,
     DashboardSurveyTemplateOption[] SurveyTemplateOptions,
     SurveyTracking? SurveyTracking);
 

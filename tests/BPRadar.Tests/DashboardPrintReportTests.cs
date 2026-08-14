@@ -68,4 +68,46 @@ public sealed partial class DashboardPrintReportTests
         StringAssert.Contains(report, "75% survey score");
         StringAssert.Contains(report, "id=\"report-survey-trend\"");
     }
+
+    [TestMethod]
+    public async Task Print_report_filters_and_records_the_survey_submission_date_range()
+    {
+        await using var application = DashboardUiTests.DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard/Report?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&surveySubmissionFrom=2026-07-01" +
+            "&surveySubmissionTo=2026-07-01");
+
+        Assert.AreEqual(HttpStatusCode.OK, response.StatusCode);
+        var report = WebUtility.HtmlDecode(
+            await response.Content.ReadAsStringAsync());
+        StringAssert.Contains(report, "Survey submission date range:");
+        StringAssert.Contains(report, "2026-07-01");
+        StringAssert.Contains(report, "75% survey score");
+        Assert.IsFalse(report.Contains("2026-04-01", StringComparison.Ordinal));
+        Assert.IsFalse(
+            report.Contains("+25 points vs previous survey", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task Print_report_rejects_an_inverted_survey_submission_date_range()
+    {
+        await using var application = DashboardUiTests.DashboardApplication.Create();
+        using var client = application.CreateClient();
+        var setup = await application.SeedAsync();
+
+        using var response = await client.GetAsync(
+            $"/Dashboard/Report?organizationId={setup.OrganizationId}" +
+            $"&assessmentIds={setup.AssessmentId}" +
+            $"&surveyTemplateId={setup.SurveyTemplateId}" +
+            "&surveySubmissionFrom=2026-08-01" +
+            "&surveySubmissionTo=2026-07-01");
+
+        Assert.AreEqual(HttpStatusCode.BadRequest, response.StatusCode);
+    }
 }
