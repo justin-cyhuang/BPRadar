@@ -348,8 +348,8 @@
                     </article>
                     <article>
                         <h4>Cadence</h4>
-                        <strong>
-                            @(tracking.CadenceStatus == SurveyDueStatus.Overdue ? "Overdue" : "On time")
+                        <strong class="cadence-status @SurveyDueStatusDisplay.CssClass(tracking.CadenceStatus)">
+                            @SurveyDueStatusDisplay.Label(tracking.CadenceStatus)
                         </strong>
                         @if (tracking.NextDueDate is not null)
                         {
