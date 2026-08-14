@@ -230,7 +230,7 @@
                         <td>@gap.DomainCode - @gap.DomainName</td>
                         <td>@gap.ControlCode</td>
                         <td>@gap.Title</td>
-                        <td>@(gap.Status == ComplianceStatus.NonCompliant ? "Non-Compliant" : "Partial")</td>
+                        <td>@gap.Status.ToDisplayText()</td>
                         <td>@gap.Notes</td>
                     </tr>
                 }
